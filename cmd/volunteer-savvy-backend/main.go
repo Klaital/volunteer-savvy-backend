@@ -19,5 +19,4 @@ func main() {
 	} else {
 		logger.Debugf("Loaded service config: %v", cfg)
 	}
-
 }

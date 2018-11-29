@@ -6,3 +6,5 @@ require (
 )
 
 replace github.com/klaital/volunteer-savvy-backend/internal/pkg/config => ./internal/pkg/config
+
+replace github.com/klaital/volunteer-savvy-backend/internal/pkg/users => ./internal/pkg/users

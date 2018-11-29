@@ -97,4 +97,3 @@ notifications or email notifications on certain triggers.
     # Device Registration for Push Notifications
     POST /subscription/register-device/
     
-    
