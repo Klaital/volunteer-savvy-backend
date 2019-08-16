@@ -17,6 +17,18 @@ type ServiceConfig struct {
 	DatabaseName     string `env:"DB_NAME"` // the actual database name to connect to
 	DatabaseDSN      string // to be constructed after parsing the env variables
 	DatabaseConnection *sqlx.DB // to be set at runtime after main connects to the database
+
+	Debug            bool   `env:"DEBUG" envDefault:"false"`
+
+	Port             int64  `env:"PORT" envDefault:"8080"`
+
+	// Swagger
+	SwaggerFilePath string `env:"SWAGGER_FILE_PATH"`
+	APIPath         string `env:"SWAGGER_API_PATH"`
+	SwaggerPath     string `env:"SWAGGER_PATH"`
+
+	// HealthCheck
+	HealthCheckPath string `env:"HEALTH_PATH" envDefault:"/GetServiceStatus"`
 }
 
 var serviceConfig *ServiceConfig

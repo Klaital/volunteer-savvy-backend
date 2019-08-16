@@ -1,10 +1,16 @@
 package main
 
 import (
+	"github.com/golang-migrate/migrate/v4"
+	"github.com/golang-migrate/migrate/v4/database/postgres"
+	_ "github.com/golang-migrate/migrate/v4/database/postgres"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
+	"github.com/jmoiron/sqlx"
 	"github.com/klaital/volunteer-savvy-backend/internal/pkg/config"
+	"github.com/klaital/volunteer-savvy-backend/internal/pkg/server"
+	_ "github.com/lib/pq"
 	log "github.com/sirupsen/logrus"
 	"time"
-	"github.com/jmoiron/sqlx"
 )
 
 func main() {
@@ -13,21 +19,48 @@ func main() {
 		"operation": "main",
 	})
 
+	log.SetLevel(log.DebugLevel)
 	logger.Info("Starting server...")
 
 	cfg, err := config.GetServiceConfig()
 	if err != nil {
 		logger.Fatalf("Unable to load service config: %v", err)
 	} else {
-		logger.Debugf("Loaded service config: %v", cfg)
+		logger.Debugf("Loaded service config: %+v", cfg)
 	}
 
 	log.Debugf("Preparing DB connection with %s", cfg.DatabaseDriver)
 	db, err := sqlx.Connect(cfg.DatabaseDriver, cfg.DatabaseDSN)
 	for err != nil {
 		log.Warnf("Waiting for database to come up: %v", err)
-		time.Sleep(1000 * time.Millisecond)
+		time.Sleep(2000 * time.Millisecond)
 		db, err = sqlx.Connect(cfg.DatabaseDriver, cfg.DatabaseDSN)
 	}
 	defer db.Close()
+	cfg.DatabaseConnection = db
+
+	log.Debugf("Migrating database...")
+	driver, err := postgres.WithInstance(db.DB, &postgres.Config{})
+	if err != nil {
+		logger.Fatalf("Failed to configure postgres driver: %v", err)
+	}
+	m, err := migrate.NewWithDatabaseInstance(
+		"file://db/migrations/",
+		"postgres",
+		driver)
+	if err != nil {
+		logger.Fatalf("Failed to generate a migrator: %v", err)
+	}
+	err = m.Up()
+	if err != nil {
+		if err.Error() != "no change" {
+			logger.Fatalf("Failed to run migrations: %v", err)
+		}
+	}
+
+	s, err := server.New(cfg)
+	if err != nil {
+		logger.Fatalf("Failed to create server struct: %v", err)
+	}
+	s.Serve()
 }

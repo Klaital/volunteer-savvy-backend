@@ -2,7 +2,7 @@ package users
 
 type User struct {
 	Id    int32  `json:"-" db:"id"`
-	Guid  string `json:"user_guid"`
+	Guid  string `json:"user_guid" db:"user_guid"`
 	Email string `json:"email" db:"email"`
 	PasswordHash string `json:"-" db:"password_digest"`
 

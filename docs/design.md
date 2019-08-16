@@ -43,6 +43,10 @@ The Site API service will handle CRUD for Sites.
     # Add/remove features from Sites
     PUT    /sites/{site-slug}/feature/{feature-id}
     DELETE /sites/{site-slug}/feature/{feature-id}
+    
+    # Add/remove site coordinators from Sites
+    PUT    /sites/{site-slug}/coordinator/{feature-id}
+    DELETE /sites/{site-slug}/coordinator/{feature-id}
 
 ## Volunteer Management
 
