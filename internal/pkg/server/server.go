@@ -120,20 +120,19 @@ func (server *Server) setupAPI(serviceConfig *config.ServiceConfig) {
 			Produces(restful.MIME_JSON).
 			Writes(sites.FindAllSitesResponse{}).
 			Returns(http.StatusOK, "Fetched all sites", sites.FindAllSitesResponse{}))
-	//service.Route(
-	//	service.POST("/sites/").
-	//		//Filter(filters.RequireValidJWT).
-	//		//Filter(filters.RateLimitingFilter).
-	//		//Filter(filters.RequireAdminPermission).
-	//		To(CreateSiteHandler).
-	//		Doc("Fetch all sites").
-	//		Produces(restful.MIME_JSON).
-	//		Consumes(restful.MIME_JSON).
-	//		Reads(CreateSitesRequest{}).
-	//		Writes(CreateSiteResponse{}).
-	//		Returns(http.StatusOK, "Fetched all sites", CreateSiteResponse{}).
-	//		Returns(http.StatusUnauthorized, "Not logged in", nil).
-	//		Returns(http.StatusForbidden, "Logged-in user is not authorized to create sites", nil))
+	service.Route(
+		service.POST("/sites/").
+			//Filter(filters.RequireValidJWT).
+			//Filter(filters.RateLimitingFilter).
+			//Filter(filters.RequireAdminPermission).
+			To(sites.CreateSiteHandler).
+			Doc("Fetch all sites").
+			Produces(restful.MIME_JSON).
+			Consumes(restful.MIME_JSON).
+			Reads(sites.CreateSitesRequest{}).
+			Returns(http.StatusOK, "Created site", nil).
+			Returns(http.StatusUnauthorized, "Not logged in", nil).
+			Returns(http.StatusForbidden, "Logged-in user is not authorized to create sites", nil))
 	service.Route(
 		service.GET("/sites/{siteSlug}").
 			//Filter(filters.RequireValidJWT).
