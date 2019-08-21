@@ -3,6 +3,7 @@ package sites
 import (
 	"database/sql"
 	"errors"
+	"fmt"
 	"github.com/klaital/volunteer-savvy-backend/internal/pkg/config"
 	"github.com/klaital/volunteer-savvy-backend/internal/pkg/users"
 	log "github.com/sirupsen/logrus"
@@ -130,6 +131,8 @@ func (site *Site) CreateSite() error {
 	if err != nil {
 		logger.Errorf("Failed to create transaction: %v", err)
 		return err
+	} else {
+		logger.Debug("Starting tx to create a site")
 	}
 	if tx == nil {
 		logger.Error("No transaction handle returned")
@@ -141,16 +144,27 @@ func (site *Site) CreateSite() error {
 	}
 
 	// Insert the Site itself
-	_, siteErr := db.NamedExec(insertSiteSql, site)
+	rows, siteErr := db.NamedQuery(db.Rebind(insertSiteSql), site)
 	if siteErr != nil {
 		logger.Errorf("Failed to insert site: %v", siteErr)
 		return siteErr
+	}
+	if rows.Next() {
+		err = rows.Scan(&site.Id)
+		if err != nil {
+			logger.Errorf("Failed to scan site ID: %v", err)
+			return err
+		} else {
+			logger.Debugf("Got inserted site ID: %d", site.Id)
+		}
+	} else {
+		return fmt.Errorf("no site ID returned")
 	}
 
 	// TODO: Insert the Manager references
 
 	// Insert the Default Schedule
-	if _, defaultScheduleErr := db.NamedExec(insertDefaultScheduleSql, site); defaultScheduleErr != nil {
+	if _, defaultScheduleErr := db.Exec(db.Rebind(insertDefaultScheduleSql), site.Id, site.Id, site.Id, site.Id, site.Id, site.Id, site.Id); defaultScheduleErr != nil {
 		logger.Errorf("Failed to insert default schedule: %v", defaultScheduleErr)
 		return defaultScheduleErr
 	}
@@ -254,4 +268,27 @@ func FindAllSites() (sites []Site, err error) {
 
 	// success!
 	return sites, nil
+}
+
+func DeleteSite(siteSlug string) error {
+	logger := log.WithFields(log.Fields{
+		"operation": "DeleteSite",
+		"SiteSlug": siteSlug,
+	})
+
+	svcConfig, err := config.GetServiceConfig()
+	if err != nil {
+		logger.Errorf("Failed to load service config: %v")
+		return err
+	}
+	db := svcConfig.DatabaseConnection
+
+	_, err = db.Exec(db.Rebind(deleteSiteSql), siteSlug)
+	if err != nil {
+		logger.Errorf("Failed to delete site: %v", err)
+		return err
+	}
+
+	// Success!
+	return nil
 }

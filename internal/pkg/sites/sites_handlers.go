@@ -4,6 +4,7 @@ import (
 	"github.com/emicklei/go-restful"
 	log "github.com/sirupsen/logrus"
 	"net/http"
+	"strings"
 )
 
 type FindAllSitesResponse struct {
@@ -52,7 +53,7 @@ type CreateSitesRequest struct {
 }
 func CreateSiteHandler(request *restful.Request, response *restful.Response) {
 	logger := log.WithField("operation", "CreateSiteHandler")
-	var site Site
+	var site CreateSitesRequest
 	jsonErr := request.ReadEntity(&site)
 	if jsonErr != nil {
 		logger.Errorf("Failed to read JSON from the request: %v", jsonErr)
@@ -60,12 +61,32 @@ func CreateSiteHandler(request *restful.Request, response *restful.Response) {
 		return
 	}
 
-	err := site.CreateSite()
+	err := site.Site.CreateSite()
 	if err != nil {
-		logger.Errorf("Failed to insert site data: %v", err)
-		response.WriteHeader(http.StatusInternalServerError)
+		if strings.Index(err.Error(), "duplicate key value violates unique constraint") > 0 {
+			logger.Errorf("Requested site has a duplicate slug: %v", err)
+			response.WriteHeader(http.StatusBadRequest)
+		} else {
+			logger.Errorf("Failed to insert site data: %v", err)
+			response.WriteHeader(http.StatusInternalServerError)
+		}
 		return
 	}
 
 	response.WriteHeader(http.StatusOK)
+}
+
+func DeleteSiteHandler(request *restful.Request, response *restful.Response) {
+	siteSlug := request.PathParameter("siteSlug")
+	logger := log.WithFields(log.Fields{
+		"operation": "DeleteSiteHandler",
+		"SiteSlug": siteSlug,
+	})
+	err := DeleteSite(siteSlug)
+	if err != nil {
+		// TODO: discern between a DB error and an attempt to delete a site that doesn't exist
+		logger.Errorf("Failed to delete site: %v", err)
+		response.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 }

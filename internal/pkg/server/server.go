@@ -156,17 +156,17 @@ func (server *Server) setupAPI(serviceConfig *config.ServiceConfig) {
 	//		Returns(http.StatusOK, "Site updated", sites.Site{}).
 	//		Returns(http.StatusUnauthorized, "Not logged in", nil).
 	//		Returns(http.StatusForbidden, "Logged-in user is not authorized to update this site", nil))
-	//service.Route(
-	//	service.DELETE("/sites/{siteSlug}").
-	//		//Filter(filters.RequireValidJWT).
-	//		//Filter(filters.RateLimitingFilter).
-	//		//Filter(filters.RequireAdminPermission).
-	//		To(DeleteSiteHandler).
-	//		Doc("Delete site and related calendars").
-	//		Produces(restful.MIME_JSON).
-	//		Returns(http.StatusOK, "Site deleted", nil).
-	//		Returns(http.StatusUnauthorized, "Not logged in", nil).
-	//		Returns(http.StatusForbidden, "Logged-in user is not authorized to update this site", nil))
+	service.Route(
+		service.DELETE("/sites/{siteSlug}").
+			//Filter(filters.RequireValidJWT).
+			//Filter(filters.RateLimitingFilter).
+			//Filter(filters.RequireAdminPermission).
+			To(sites.DeleteSiteHandler).
+			Doc("Delete site and related calendars").
+			Produces(restful.MIME_JSON).
+			Returns(http.StatusOK, "Site deleted", nil).
+			Returns(http.StatusUnauthorized, "Not logged in", nil).
+			Returns(http.StatusForbidden, "Logged-in user is not authorized to update this site", nil))
 	//service.Route(
 	//	service.PUT("/sites/{siteSlug}/feature/{featureId}").
 	//		//Filter(filters.RequireValidJWT).

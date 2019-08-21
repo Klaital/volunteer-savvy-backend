@@ -43,20 +43,24 @@ var selectSiteSchedulesSql = `
 var insertSiteSql = `
 	INSERT INTO sites (
 		slug, name_l10n, locale, lat, lon, gplace_id, street, city, state, zip, is_active
-	), VALUES (
+	) VALUES (
 		:slug, :name_l10n, :locale, :lat, :lon, :gplace_id, :street, :city, :state, :zip, :is_active
-	)
+	) RETURNING id
 `
 
 var insertDefaultScheduleSql = `
 	INSERT INTO daily_schedules 
 		(site_id, dotw_default, override_date, open_time, close_time, is_open)
 	VALUES
-		(:id, 'sunday', null, '09:00', '17:00', true),
-		(:id, 'monday', null, '09:00', '17:00', true),
-		(:id, 'tuesday', null, '09:00', '17:00', true),
-		(:id, 'wednesday', null, '09:00', '17:00', true),
-		(:id, 'thursday', null, '09:00', '17:00', true),
-		(:id, 'friday', null, '09:00', '17:00', true),
-		(:id, 'saturday', null, '09:00', '17:00', true)
+		(?, 'sunday', null, '09:00', '17:00', true),
+		(?, 'monday', null, '09:00', '17:00', true),
+		(?, 'tuesday', null, '09:00', '17:00', true),
+		(?, 'wednesday', null, '09:00', '17:00', true),
+		(?, 'thursday', null, '09:00', '17:00', true),
+		(?, 'friday', null, '09:00', '17:00', true),
+		(?, 'saturday', null, '09:00', '17:00', true)
+`
+
+var deleteSiteSql = `
+	DELETE FROM sites WHERE slug = ?
 `
