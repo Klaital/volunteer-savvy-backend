@@ -1,4 +1,5 @@
-
+-- Organizations
+DROP TABLE IF EXISTS organizations;
 
 -- Sites
 DROP INDEX IF EXISTS site_slug_index;

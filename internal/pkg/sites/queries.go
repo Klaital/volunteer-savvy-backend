@@ -24,6 +24,8 @@ var findAllSitesSql = `
 		LEFT OUTER JOIN site_coordinators ON site_coordinators.site_id = sites.id
 		LEFT OUTER JOIN users ON site_coordinators.user_id = users.id 
 		LEFT OUTER JOIN daily_schedules on daily_schedules.site_id = sites.id
+	WHERE
+		sites.organization_id = ?
 `
 var findSingleSiteSql = findAllSitesSql + `
 	WHERE sites.slug = ?	

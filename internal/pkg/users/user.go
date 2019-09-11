@@ -2,6 +2,7 @@ package users
 
 type User struct {
 	Id    int32  `json:"-" db:"id"`
+	OrganizationId uint64 `json:"organization_id" db:"organization_id"`
 	Guid  string `json:"user_guid" db:"user_guid"`
 	Email string `json:"email" db:"email"`
 	PasswordHash string `json:"-" db:"password_digest"`

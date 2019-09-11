@@ -1,9 +1,18 @@
 
+-- Organizations
+
+CREATE TABLE organizations (
+    id SERIAL PRIMARY KEY
+);
+
+
 -- Sites
 
 CREATE TABLE sites (
   id SERIAL PRIMARY KEY,
+  organization_id INTEGER REFERENCES organizations(id),
   slug VARCHAR(64) UNIQUE NOT NULL,
+
   name_l10n VARCHAR(128) NOT NULL,
   locale VARCHAR(128) NOT NULL,
 
@@ -25,6 +34,7 @@ CREATE INDEX site_slug_index ON sites(slug);
 
 CREATE TABLE users (
   id SERIAL PRIMARY KEY,
+  organization_id INTEGER REFERENCES organizations(id),
   user_guid VARCHAR(64) UNIQUE NOT NULL,
   email VARCHAR(128) UNIQUE NOT NULL,
   password_digest VARCHAR(128) NOT NULL

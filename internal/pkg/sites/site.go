@@ -50,6 +50,8 @@ type DailySchedule struct {
 //}
 type Site struct {
 	Id     uint64  `json:"-" db:"id"`
+	OrganizationId uint64 `json:"organization_id" db:"organization_id"`
+
 	Slug   string `json:"slug" db:"slug"`
 	Name   string `json:"name" db:"name_l10n"`
 	Locale string `json:"locale" db:"locale"`
@@ -245,7 +247,7 @@ func CoallateSiteSet(rows []FindAllSitesRow) []Site {
 
 	return siteList
 }
-func FindAllSites() (sites []Site, err error) {
+func FindAllSites(organizationId int) (sites []Site, err error) {
 	logger := log.WithFields(log.Fields{
 		"operation": "FindAllSites",
 	})
@@ -257,7 +259,7 @@ func FindAllSites() (sites []Site, err error) {
 		return nil, err
 	}
 	rows := make([]FindAllSitesRow,0)
-	err = svcConfig.DatabaseConnection.Select(&rows, findAllSitesSql)
+	err = svcConfig.DatabaseConnection.Select(&rows, findAllSitesSql, organizationId)
 	if err != nil {
 		logger.Errorf("Failed to select all sites: %v", err)
 		return nil, err

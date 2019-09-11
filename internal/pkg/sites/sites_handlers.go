@@ -4,6 +4,7 @@ import (
 	"github.com/emicklei/go-restful"
 	log "github.com/sirupsen/logrus"
 	"net/http"
+	"strconv"
 	"strings"
 )
 
@@ -11,17 +12,28 @@ type FindAllSitesResponse struct {
 	Sites []Site
 }
 func FindAllSitesHandler(request *restful.Request, response *restful.Response) {
-	sites, err := FindAllSites()
+	organizationId := request.PathParameter("organizationId")
+	logger := log.WithFields(log.Fields{
+		"operation": "FindAllSitesHandler",
+		"org": organizationId,
+	})
+
+	organizationIdInt, err := strconv.Atoi(organizationId)
 	if err != nil {
-		log.WithField("operation", "FindAllSitesHandler").
-			Errorf("Failed to fetch sites data: %v", err)
+		logger.Errorf("Invalid organization ID. %v", err)
+		response.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	sites, err := FindAllSites(organizationIdInt)
+	if err != nil {
+		logger.Errorf("Failed to fetch sites data: %v", err)
 		response.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 	err = response.WriteEntity(FindAllSitesResponse{Sites:sites})
 	if err != nil {
-		log.WithField("operation", "FindAllSitesHandler").
-			Errorf("Failed to serialize sites data: %v", err)
+		logger.Errorf("Failed to serialize sites data: %v", err)
 		response.WriteHeader(http.StatusInternalServerError)
 		return
 	}
