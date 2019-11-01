@@ -1,14 +1,14 @@
 package sites
 
 
-var findSiteSql = `
+const findSiteSql = `
 	SELECT
 		id, slug, name_l10n, locale, 
 		lat, lon, gplace_id, street, city, state, zip, 
 		is_active 
 	FROM sites WHERE slug=? LIMIT 1
 `
-var findAllSitesSql = `
+const findAllSitesSql = `
 	SELECT 
 		sites.id, sites.slug, sites.name_l10n, sites.locale, 
 		sites.lat, sites.lon, sites.gplace_id, sites.street, 
@@ -27,22 +27,22 @@ var findAllSitesSql = `
 	WHERE
 		sites.organization_id = ?
 `
-var findSingleSiteSql = findAllSitesSql + `
+const findSingleSiteSql = findAllSitesSql + `
 	WHERE sites.slug = ?	
 `
 
-var selectSiteCoordinatorsForSiteSql = `
+const selectSiteCoordinatorsForSiteSql = `
 	SELECT users.id, users.user_guid, users.email 
 	FROM users JOIN site_coordinators ON users.id = site_coordinators.user_id
 	WHERE site_coordinators.site_id = ?`
 
-var selectSiteSchedulesSql = `
+const selectSiteSchedulesSql = `
 	SELECT id, site_id, dotw_default, override_date, open_time, close_time, is_open 
 	FROM daily_schedules 
 	WHERE site_id = ?
 `
 
-var insertSiteSql = `
+const insertSiteSql = `
 	INSERT INTO sites (
 		slug, name_l10n, locale, lat, lon, gplace_id, street, city, state, zip, is_active
 	) VALUES (
@@ -50,7 +50,7 @@ var insertSiteSql = `
 	) RETURNING id
 `
 
-var insertDefaultScheduleSql = `
+const insertDefaultScheduleSql = `
 	INSERT INTO daily_schedules 
 		(site_id, dotw_default, override_date, open_time, close_time, is_open)
 	VALUES
@@ -63,6 +63,20 @@ var insertDefaultScheduleSql = `
 		(?, 'saturday', null, '09:00', '17:00', true)
 `
 
-var deleteSiteSql = `
+const deleteSiteSql = `
 	DELETE FROM sites WHERE slug = ?
+`
+const updateSiteSql = `
+	UPDATE sites SET 
+		name_l10n = :name_l10n,
+		locale = :locale,
+		lat = :lat,
+		lon = :lon,
+		gplace_id = :gplace_id,
+		street = :street,
+		city = :city,
+		state = :state,
+		zip = :zip,
+		is_active = :is_active
+	WHERE slug = :slug
 `

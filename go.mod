@@ -13,3 +13,9 @@ require (
 replace github.com/klaital/volunteer-savvy-backend/internal/pkg/config => ./internal/pkg/config
 
 replace github.com/klaital/volunteer-savvy-backend/internal/pkg/users => ./internal/pkg/users
+
+replace github.com/klaital/volunteer-savvy-backend/internal/pkg/organizations => ./internal/pkg/organizations
+
+replace github.com/klaital/volunteer-savvy-backend/internal/pkg/sites => ./internal/pkg/sites
+
+replace github.com/klaital/volunteer-savvy-backend/internal/pkg/server => ./internal/pkg/server

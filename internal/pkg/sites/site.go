@@ -294,3 +294,20 @@ func DeleteSite(siteSlug string) error {
 	// Success!
 	return nil
 }
+
+func (site *Site) UpdateSiteAdmin(updateData *UpdateSiteRequestAdmin) error {
+	logger := log.WithFields(log.Fields{
+		"operation": "DeleteSite",
+		"SiteSlug": site.Slug,
+	})
+
+	svcConfig, err := config.GetServiceConfig()
+	if err != nil {
+		logger.Errorf("Failed to load service config: %v")
+		return err
+	}
+	db := svcConfig.DatabaseConnection
+	sqlStmt := db.Rebind(updateSiteSql)
+	_, err = db.NamedExec(sqlStmt, site)
+	return err
+}

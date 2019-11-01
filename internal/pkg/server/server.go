@@ -3,6 +3,7 @@ package server
 import (
 	"fmt"
 	"github.com/klaital/volunteer-savvy-backend/internal/pkg/filters"
+	"github.com/klaital/volunteer-savvy-backend/internal/pkg/organizations"
 	"github.com/klaital/volunteer-savvy-backend/internal/pkg/sites"
 	"net/http"
 	"time"
@@ -112,6 +113,71 @@ func (server *Server) setupAPI(serviceConfig *config.ServiceConfig) {
 	service := new(restful.WebService)
 	service.Path(serviceConfig.BasePath).ApiVersion("0.0.0").Doc("Volunteer-Savvy Backend")
 
+	//
+	// Organizations APIs
+	//
+	service.Route(
+		service.GET("/organizations/").
+			//Filter(filters.RateLimitingFilter).
+			To(organizations.ListOrganizationsHandler).
+			Doc("List Organizations").
+			Produces(restful.MIME_JSON).
+			Writes([]organizations.Organization{}).
+			Returns(http.StatusOK, "Fetched all organizations", []organizations.Organization{}))
+	// TODO: CreateOrganization needs a SuperAdmin permissions check filter
+	service.Route(
+		service.POST("/organizations/").
+			//Filter(filters.RequireValidJWT).
+			//Filter(filters.RateLimitingFilter).
+			//Filter(filters.RequireSuperAdminPermission).
+			To(organizations.CreateOrganizationHandler).
+			Doc("Create Organization").
+			Produces(restful.MIME_JSON).
+			Consumes(restful.MIME_JSON).
+			Reads(organizations.Organization{}).
+			Writes(organizations.Organization{}).
+			Returns(http.StatusOK, "Organization created.", organizations.Organization{}))
+	service.Route(
+		service.GET("/organizations/{organizationId}").
+			//Filter(filters.RateLimitingFilter).
+			To(organizations.DescribeOrganizationHandler).
+			Doc("Describe Organization").
+			Param(restful.PathParameter("organizationId", "ID taken from ListOrganizations")).
+			Produces(restful.MIME_JSON).
+			Writes(organizations.Organization{}).
+			Returns(http.StatusOK, "Organization details fetched", organizations.Organization{}).
+			Returns(http.StatusNotFound, "Invalid Organization ID", nil))
+	// TODO: UpdateOrganization needs a SuperAdmin permissions check filter
+	service.Route(
+		service.PUT("/organizations/{organizationId}").
+			//Filter(filters.RequireValidJWT).
+			//Filter(filters.RateLimitingFilter).
+			//Filter(filters.RequireSuperAdminPermission).
+			To(organizations.UpdateOrganizationHandler).
+			Doc("Update Organization").
+			Param(restful.PathParameter("organizationId", "ID taken from ListOrganizations")).
+			Consumes(restful.MIME_JSON).
+			Produces(restful.MIME_JSON).
+			Reads(organizations.Organization{}).
+			Writes(organizations.Organization{}).
+			Returns(http.StatusOK, "Organization details updated", organizations.Organization{}).
+			Returns(http.StatusBadRequest, "Unable to set the requested values.", nil).
+			Returns(http.StatusNotFound, "Invalid Organization ID", nil))
+	// TODO: DeleteOrganizations needs a SuperAdmin permissions check filter
+	service.Route(
+		service.DELETE("/organizations/{organizationId}").
+			//Filter(filters.RequireValidJWT).
+			//Filter(filters.RateLimitingFilter).
+			//Filter(filters.RequireSuperAdminPermission).
+			To(organizations.DestroyOrganizationHandler).
+			Doc("Destroy Organization").
+			Param(restful.PathParameter("organizationId", "ID taken from ListOrganizations")).
+			Returns(http.StatusOK, "Organization deleted", nil).
+			Returns(http.StatusNotFound, "Invalid Organization ID", nil))
+
+	//
+	// Sites APIs
+	//
 	service.Route(
 		service.GET("/sites/").
 			//Filter(filters.RateLimitingFilter).
@@ -142,20 +208,20 @@ func (server *Server) setupAPI(serviceConfig *config.ServiceConfig) {
 			Produces(restful.MIME_JSON).
 			Writes(sites.Site{}).
 			Returns(http.StatusOK, "Fetched site data", sites.Site{}))
-	//service.Route(
-	//	service.PUT("/sites/{siteSlug}").
-	//		//Filter(filters.RequireValidJWT).
-	//		//Filter(filters.RateLimitingFilter).
-	//		//Filter(filters.RequireSiteUpdatePermission).
-	//		To(UpdateSiteHandler).
-	//		Doc("Update site config").
-	//		Produces(restful.MIME_JSON).
-	//		Consumes(restful.MIME_JSON).
-	//		Reads(UpdateSiteRequest{}).
-	//		Writes(sites.Site{}).
-	//		Returns(http.StatusOK, "Site updated", sites.Site{}).
-	//		Returns(http.StatusUnauthorized, "Not logged in", nil).
-	//		Returns(http.StatusForbidden, "Logged-in user is not authorized to update this site", nil))
+	service.Route(
+		service.PUT("/sites/{siteSlug}").
+			//Filter(filters.RequireValidJWT).
+			//Filter(filters.RateLimitingFilter).
+			//Filter(filters.RequireSiteUpdatePermission).
+			To(sites.UpdateSiteHandler).
+			Doc("Update site config").
+			Produces(restful.MIME_JSON).
+			Consumes(restful.MIME_JSON).
+			Reads(sites.UpdateSiteRequestAdmin{}).
+			Writes(sites.Site{}).
+			Returns(http.StatusOK, "Site updated", sites.Site{}).
+			Returns(http.StatusUnauthorized, "Not logged in", nil).
+			Returns(http.StatusForbidden, "Logged-in user is not authorized to update this site", nil))
 	service.Route(
 		service.DELETE("/sites/{siteSlug}").
 			//Filter(filters.RequireValidJWT).

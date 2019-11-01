@@ -88,6 +88,47 @@ func CreateSiteHandler(request *restful.Request, response *restful.Response) {
 	response.WriteHeader(http.StatusOK)
 }
 
+
+type UpdateSiteRequestAdmin struct {
+	Site
+}
+type UpdateSiteRequestSelf struct {
+	Email    string
+	Password string
+	PasswordConfirmation string
+}
+
+func UpdateSiteHandler(request *restful.Request, response *restful.Response) {
+	logger := log.WithFields(log.Fields{
+		"operation": "UpdateSiteHandler",
+		"Site": request.PathParameter("siteSlug"),
+	})
+	var site UpdateSiteRequestAdmin
+	jsonErr := request.ReadEntity(&site)
+	if jsonErr != nil {
+		logger.Errorf("Failed to read JSON from the request: %v", jsonErr)
+		response.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	var err error
+
+	// TODO: Use different structs depending on the logged-in user's permissions
+	err = site.Site.UpdateSiteAdmin(&site)
+	if err != nil {
+		if strings.Contains(err.Error(), "duplicate key value violates unique constraint") {
+			logger.WithError(err).Error("Requested site has a duplicate slug")
+			response.WriteHeader(http.StatusBadRequest)
+		} else {
+			logger.WithError(err).Error("Failed to insert site data: %v")
+			response.WriteHeader(http.StatusInternalServerError)
+		}
+		return
+	}
+
+	response.WriteHeader(http.StatusOK)
+}
+
 func DeleteSiteHandler(request *restful.Request, response *restful.Response) {
 	siteSlug := request.PathParameter("siteSlug")
 	logger := log.WithFields(log.Fields{
