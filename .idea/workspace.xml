@@ -6,9 +6,6 @@
       <change beforePath="$PROJECT_DIR$/go.mod" beforeDir="false" afterPath="$PROJECT_DIR$/go.mod" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/go.sum" beforeDir="false" afterPath="$PROJECT_DIR$/go.sum" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/internal/pkg/server/server.go" beforeDir="false" afterPath="$PROJECT_DIR$/internal/pkg/server/server.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/internal/pkg/sites/queries.go" beforeDir="false" afterPath="$PROJECT_DIR$/internal/pkg/sites/queries.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/internal/pkg/sites/site.go" beforeDir="false" afterPath="$PROJECT_DIR$/internal/pkg/sites/site.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/internal/pkg/sites/sites_handlers.go" beforeDir="false" afterPath="$PROJECT_DIR$/internal/pkg/sites/sites_handlers.go" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />

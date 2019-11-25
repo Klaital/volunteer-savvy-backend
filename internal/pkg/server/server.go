@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/emicklei/go-restful"
-	"github.com/emicklei/go-restful-swagger12"
+	restfulspec "github.com/emicklei/go-restful-openapi"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/klaital/volunteer-savvy-backend/internal/pkg/config"
@@ -32,11 +32,10 @@ func New(config *config.ServiceConfig) (*Server, error) {
 	server.container.Filter(filters.JSONCommonLogger)
 
 	// set up the single api we'll use for the example
-	server.setupAPI(config)
+	server.setupAPI()
 
-	if config.Debug {
-		server.addSwaggerSupport()
-	}
+	// Expose Swagger-UI
+	http.Handle("/apidocs/", http.StripPrefix("/apidocs/", http.FileServer(http.Dir("~/bin/swagger-ui/dist"))))
 
 	rootService := new(restful.WebService)
 
@@ -79,17 +78,17 @@ func (server *Server) Serve() {
 	}
 }
 
-func (server *Server) addSwaggerSupport() {
-	swaggerConfig := swagger.Config{
-		WebServices:     server.container.RegisteredWebServices(),
-		ApiPath:         server.Config.BasePath + server.Config.APIPath,
-		SwaggerPath:     server.Config.BasePath + server.Config.SwaggerPath,
-		SwaggerFilePath: server.Config.SwaggerFilePath,
-	}
-
-	swagger.RegisterSwaggerService(swaggerConfig, server.container)
-
-}
+//func (server *Server) addSwaggerSupport() {
+//	swaggerConfig := swagger.Config{
+//		WebServices:     server.container.RegisteredWebServices(),
+//		ApiPath:         server.Config.BasePath + server.Config.APIPath,
+//		SwaggerPath:     server.Config.BasePath + server.Config.SwaggerPath,
+//		SwaggerFilePath: server.Config.SwaggerFilePath,
+//	}
+//
+//	swagger.RegisterSwaggerService(swaggerConfig, server.container)
+//
+//}
 
 func (server *Server) addHealthCheck(service *restful.WebService) {
 	service.Route(service.GET(server.Config.HealthCheckPath).To(server.healthCheckHandler))
@@ -108,10 +107,10 @@ func (server *Server) healthCheckHandler(request *restful.Request, response *res
 }
 
 // do this for each subpackage/service
-func (server *Server) setupAPI(serviceConfig *config.ServiceConfig) {
+func (server *Server) setupAPI() {
 
 	service := new(restful.WebService)
-	service.Path(serviceConfig.BasePath).ApiVersion("0.0.0").Doc("Volunteer-Savvy Backend")
+	service.Path(server.Config.BasePath).ApiVersion("0.0.0").Doc("Volunteer-Savvy Backend")
 
 	//
 	// Organizations APIs
@@ -328,4 +327,15 @@ func (server *Server) setupAPI(serviceConfig *config.ServiceConfig) {
 	//		Returns(http.StatusForbidden, "Logged-in user is not authorized to update this user", nil))
 
 	server.container.Add(service)
+
+	version := "0.0.0"
+
+
+	swaggerConfig := restfulspec.Config{
+		APIPath:                       "/apidocs.json",
+		WebServices:                   restful.RegisteredWebServices(),
+		DisableCORS:                   true,
+		APIVersion:                    version,
+	}
+	server.container.Add(restfulspec.NewOpenAPIService(swaggerConfig))
 }
