@@ -2,11 +2,31 @@ package organizations
 
 import (
 	"github.com/emicklei/go-restful"
+	"github.com/jmoiron/sqlx"
 	"github.com/klaital/volunteer-savvy-backend/internal/pkg/config"
 	"github.com/sirupsen/logrus"
 	"net/http"
 	"strconv"
 )
+
+type ListOrganizationsRequest struct {
+	// Input
+	Db *sqlx.DB
+
+	// Output
+	Organizations []Organization
+}
+
+func (request *ListOrganizationsRequest) ListOrganizations() error {
+	organizations := make([]Organization, 0)
+	sqlStmt := request.Db.Rebind(listOrganizationsSql)
+	err := request.Db.Select(&organizations, sqlStmt)
+	if err != nil {
+		return err
+	}
+	request.Organizations = organizations
+	return nil
+}
 func ListOrganizationsHandler(request *restful.Request, response *restful.Response) {
 	logger := logrus.WithFields(logrus.Fields{
 		"operation": "ListOrganizationsHandler",
@@ -17,16 +37,17 @@ func ListOrganizationsHandler(request *restful.Request, response *restful.Respon
 		response.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	organizations := make([]Organization, 0)
-	sqlStmt := appConfig.DatabaseConnection.Rebind(listOrganizationsSql)
-	err = appConfig.DatabaseConnection.Select(&organizations, sqlStmt)
+	requestConfig := ListOrganizationsRequest{
+		Db:            appConfig.DatabaseConnection,
+		Organizations: nil,
+	}
+	err = requestConfig.ListOrganizations()
 	if err != nil {
-		logger.WithError(err).Error("Failed to query organizations")
+		logger.WithError(err).Error("Failed to query for organizations")
 		response.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-
-	err = response.WriteEntity(organizations)
+	err = response.WriteEntity(requestConfig.Organizations)
 	if err != nil {
 		logger.WithError(err).Error("Failed to write organizations response")
 		response.WriteHeader(http.StatusInternalServerError)

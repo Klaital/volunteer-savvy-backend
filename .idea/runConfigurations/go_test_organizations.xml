@@ -1,0 +1,13 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="go test organizations" type="GoTestRunConfiguration" factoryName="Go Test">
+    <module name="volunteer-savvy-backend" />
+    <working_directory value="$PROJECT_DIR$/" />
+    <go_parameters value="-i" />
+    <framework value="gotest" />
+    <kind value="PACKAGE" />
+    <package value="github.com/klaital/volunteer-savvy-backend/internal/pkg/organizations" />
+    <directory value="$PROJECT_DIR$/internal/pkg/organizations" />
+    <filePath value="$PROJECT_DIR$/" />
+    <method v="2" />
+  </configuration>
+</component>

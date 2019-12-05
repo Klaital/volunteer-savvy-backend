@@ -2,6 +2,7 @@
 
 1. SPIKE: Unit and integration testing
 1. SPIKE: Automated building & testing
+1. Swagger Integration
 1. Organizations CRUD
 1. Users basic CRUD
 1. Sites basic CRUD
