@@ -18,11 +18,16 @@ type ListOrganizationsRequest struct {
 }
 
 func (request *ListOrganizationsRequest) ListOrganizations() error {
-	organizations := make([]Organization, 0)
+	organizationRows := make([]OrganizationDbRow, 0)
 	sqlStmt := request.Db.Rebind(listOrganizationsSql)
-	err := request.Db.Select(&organizations, sqlStmt)
+	err := request.Db.Select(&organizationRows, sqlStmt)
 	if err != nil {
 		return err
+	}
+
+	organizations := make([]Organization, len(organizationRows), len(organizationRows))
+	for i, row := range organizationRows {
+		organizations[i] = *row.CopyToOrganization()
 	}
 	request.Organizations = organizations
 	return nil

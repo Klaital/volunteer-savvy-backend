@@ -19,7 +19,7 @@ func CleanupTestDb(db *sqlx.DB) error {
 	}
 	//sqlStmt := db.Rebind("DROP TABLE ?")
 	for _, tableName := range tables {
-		_, err := db.Exec(fmt.Sprintf("TRUNCATE TABLE %s ", tableName))
+		_, err := db.Exec(fmt.Sprintf("TRUNCATE TABLE %s CASCADE", tableName))
 		if err != nil {
 			return err
 		}
@@ -44,6 +44,9 @@ func LoadFixtures(db *sqlx.DB) error {
 		}
 		sqlStmt := db.Rebind(string(sqlBytes))
 		_, err = db.Exec(sqlStmt)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -58,7 +61,6 @@ func InitializeTestDb() (*sqlx.DB, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer db.Close()
 
 	// Run migrations to sync the schema
 	driver, err := postgres.WithInstance(db.DB, &postgres.Config{
@@ -70,7 +72,7 @@ func InitializeTestDb() (*sqlx.DB, error) {
 	}
 
 	m, err := migrate.NewWithDatabaseInstance(
-		"file://../../../db/migrations/",
+		"file://db/migrations/",
 		"vstest",
 		driver)
 	if err != nil {
@@ -91,8 +93,7 @@ func InitializeTestDb() (*sqlx.DB, error) {
 
 func CountTable(table string, db *sqlx.DB) int {
 	var count int
-	sqlStmt := db.Rebind("SELECT COUNT(*) FROM ?")
-	row := db.QueryRowx(sqlStmt, table)
+	row := db.QueryRowx(fmt.Sprintf("SELECT COUNT(*) FROM %s", table))
 	err := row.Scan(&count)
 	if err != nil {
 		fmt.Printf("Failed to count table: %v", err)

@@ -26,3 +26,21 @@ func (o *Organization) Create(db *sqlx.DB) error {
 	}
 	return nil
 }
+
+func FindOrganization(orgId uint64, db *sqlx.DB) (*Organization, error) {
+	logger := logrus.WithFields(logrus.Fields{
+		"operation": "FindOrganization",
+		"OrganizationId": orgId,
+	})
+
+	var org OrganizationDbRow
+	sqlStmt := db.Rebind(describeOrganizationSql)
+	err := db.Get(&org, sqlStmt, orgId)
+	if err != nil {
+		// TODO: discern between db error and legit "not found"
+		logger.WithError(err).Error("Failed to select organization")
+		return nil, err
+	}
+
+	return org.CopyToOrganization(), nil
+}

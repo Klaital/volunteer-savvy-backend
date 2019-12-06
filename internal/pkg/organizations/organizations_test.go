@@ -32,9 +32,12 @@ func (suite *OrganizationsTestSuite) SetupAllSuite() {
 
 // Perform initialization required by each test function
 func (suite *OrganizationsTestSuite) BeforeTest(suiteName, testName string) {
+	if suite.DatabaseConnection == nil {
+		suite.SetupAllSuite()
+	}
 	helpers.LoadFixtures(suite.DatabaseConnection)
 }
-//func (suite *OrganizationsTestSuite) AfterTest(suiteName, testName string) {
-//	helpers.CleanupTestDb(suite.DatabaseConnection)
-//}
-//
+func (suite *OrganizationsTestSuite) AfterTest(suiteName, testName string) {
+	helpers.CleanupTestDb(suite.DatabaseConnection)
+}
+

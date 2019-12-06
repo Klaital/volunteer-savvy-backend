@@ -1,10 +1,15 @@
-
 -- Organizations
 
 CREATE TABLE organizations (
-    id SERIAL PRIMARY KEY
-);
+                               id SERIAL PRIMARY KEY,
+                               name VARCHAR(128) NOT NULL,
+                               slug VARCHAR(64) NOT NULL,
+                               authcode VARCHAR(64) UNIQUE NOT NULL,
 
+                               contact_user_id INTEGER, -- REFERENCES users(id),
+                               lat FLOAT,
+                               lon FLOAT
+);
 
 -- Sites
 
@@ -66,3 +71,4 @@ CREATE TABLE daily_schedules (
   is_open BOOLEAN NOT NULL
 );
 CREATE INDEX sites_schedules_index ON daily_schedules(site_id);
+
