@@ -4,14 +4,12 @@
     <list default="true" id="564866d2-d96f-4b1d-935a-2053cb9e8a41" name="Default Changelist" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/db/migrations/201907291237_init.up.sql" beforeDir="false" afterPath="$PROJECT_DIR$/db/migrations/201907291237_init.up.sql" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/internal/pkg/helpers/database.go" beforeDir="false" afterPath="$PROJECT_DIR$/internal/pkg/helpers/database.go" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/internal/pkg/organizations/database.go" beforeDir="false" afterPath="$PROJECT_DIR$/internal/pkg/organizations/database.go" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/internal/pkg/organizations/database_test.go" beforeDir="false" afterPath="$PROJECT_DIR$/internal/pkg/organizations/database_test.go" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/internal/pkg/organizations/organization.go" beforeDir="false" afterPath="$PROJECT_DIR$/internal/pkg/organizations/organization.go" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/internal/pkg/organizations/organization_test.go" beforeDir="false" afterPath="$PROJECT_DIR$/internal/pkg/organizations/organization_test.go" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/internal/pkg/organizations/organizations_handlers.go" beforeDir="false" afterPath="$PROJECT_DIR$/internal/pkg/organizations/organizations_handlers.go" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/internal/pkg/organizations/organizations_handlers_test.go" beforeDir="false" afterPath="$PROJECT_DIR$/internal/pkg/organizations/organizations_handlers_test.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/internal/pkg/organizations/organizations_test.go" beforeDir="false" afterPath="$PROJECT_DIR$/internal/pkg/organizations/organizations_test.go" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/internal/pkg/organizations/queries.go" beforeDir="false" afterPath="$PROJECT_DIR$/internal/pkg/organizations/queries.go" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/testdata/organizations.sql" beforeDir="false" afterPath="$PROJECT_DIR$/testdata/organizations.sql" afterDir="false" />
     </list>
