@@ -60,6 +60,30 @@ func ListOrganizationsHandler(request *restful.Request, response *restful.Respon
 	}
 }
 
+type DescribeOrganizationRequest struct {
+	// Input
+	Db *sqlx.DB
+	OrganizationId int
+
+	// Output
+	Organization *Organization
+}
+func (request *DescribeOrganizationRequest) DescribeOrganization() error {
+	sqlStmt := request.Db.Rebind(describeOrganizationSql)
+	var orgRow OrganizationDbRow
+	err := request.Db.Get(&orgRow, sqlStmt, request.OrganizationId)
+	if err != nil {
+		// A 404 Not Found is returned when no error is returned, and no Organization is returned either.
+		if err.Error() == "sql: no rows in result set" {
+			return nil
+		}
+		return err
+	}
+
+	request.Organization = orgRow.CopyToOrganization()
+	return nil
+}
+
 func DescribeOrganizationHandler(request *restful.Request, response *restful.Response) {
 	logger := logrus.WithFields(logrus.Fields{
 		"operation": "ListOrganizationsHandler",
@@ -71,8 +95,6 @@ func DescribeOrganizationHandler(request *restful.Request, response *restful.Res
 		response.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-
-	var organization Organization
 	orgIdInt, err := strconv.Atoi(request.PathParameter("organizationId"))
 	if err != nil {
 		logger.WithError(err).Error("Invalid org ID")
@@ -80,14 +102,25 @@ func DescribeOrganizationHandler(request *restful.Request, response *restful.Res
 		return
 	}
 
-	sqlStmt := appConfig.DatabaseConnection.Rebind(describeOrganizationSql)
-	err = appConfig.DatabaseConnection.Get(&organization, sqlStmt, orgIdInt)
+	searchConfig := DescribeOrganizationRequest{
+		Db:             appConfig.DatabaseConnection,
+		OrganizationId: orgIdInt,
+		Organization:   nil,
+	}
+
+	err = searchConfig.DescribeOrganization()
 	if err != nil {
-		logger.WithError(err).Error("Failed to select organization")
+		logger.WithError(err).Error("Failed to fetch org details")
 		response.WriteHeader(http.StatusInternalServerError)
 		return
+	} else if searchConfig.Organization == nil {
+		// If no error and no data returned, then that means the request was valid, but the ID was not in the DB
+		response.WriteHeader(http.StatusNotFound)
+		return
 	}
-	err = response.WriteEntity(organization)
+
+
+	err = response.WriteEntity(*searchConfig.Organization)
 	if err != nil {
 		logger.WithError(err).Error("Failed to write organizations response")
 		response.WriteHeader(http.StatusInternalServerError)
