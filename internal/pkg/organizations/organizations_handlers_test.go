@@ -1,5 +1,6 @@
 package organizations
 
+import "github.com/sirupsen/logrus"
 
 func (suite *OrganizationsTestSuite) TestListOrganizationsRequest_ListOrganizations() {
 	request := ListOrganizationsRequest{
@@ -74,12 +75,13 @@ func (suite *OrganizationsTestSuite) TestUpdateOrganizationsRequest_UpdateOrgani
 	suite.Equal(-123.45, updatedOrg.Longitude, "Organization Latitude not returned")
 
 	// Test 2: Validate "Not Found" behavior
+	logrus.SetLevel(logrus.DebugLevel)
 	request = UpdateOrganizationRequest{
 		Db: suite.DatabaseConnection,
 		InputOrganization: &Organization{
 			Id:            200,
-			Name:          "asdf",
-			Slug:          "asdf",
+			Name:          "sitenotfound",
+			Slug:          "sitenotfound",
 			Authcode:      "asdf",
 			ContactUserId: 0,
 			Latitude:      0,

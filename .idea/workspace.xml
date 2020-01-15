@@ -5,7 +5,7 @@
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/internal/pkg/organizations/organizations_handlers.go" beforeDir="false" afterPath="$PROJECT_DIR$/internal/pkg/organizations/organizations_handlers.go" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/internal/pkg/organizations/organizations_handlers_test.go" beforeDir="false" afterPath="$PROJECT_DIR$/internal/pkg/organizations/organizations_handlers_test.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/internal/pkg/organizations/queries.go" beforeDir="false" afterPath="$PROJECT_DIR$/internal/pkg/organizations/queries.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/internal/pkg/organizations/organizations_test.go" beforeDir="false" afterPath="$PROJECT_DIR$/internal/pkg/organizations/organizations_test.go" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -136,6 +136,24 @@
   <component name="VgoProject">
     <integration-enabled>true</integration-enabled>
     <proxy>direct</proxy>
+  </component>
+  <component name="WindowStateProjectService">
+    <state width="1878" height="276" key="GridCell.Tab.0.bottom" timestamp="1579114241816">
+      <screen x="0" y="0" width="3600" height="1080" />
+    </state>
+    <state width="1878" height="276" key="GridCell.Tab.0.bottom/0.0.3600.1080@0.0.3600.1080" timestamp="1579114241816" />
+    <state width="1878" height="276" key="GridCell.Tab.0.center" timestamp="1579114241736">
+      <screen x="0" y="0" width="3600" height="1080" />
+    </state>
+    <state width="1878" height="276" key="GridCell.Tab.0.center/0.0.3600.1080@0.0.3600.1080" timestamp="1579114241736" />
+    <state width="1878" height="276" key="GridCell.Tab.0.left" timestamp="1579114241695">
+      <screen x="0" y="0" width="3600" height="1080" />
+    </state>
+    <state width="1878" height="276" key="GridCell.Tab.0.left/0.0.3600.1080@0.0.3600.1080" timestamp="1579114241695" />
+    <state width="1878" height="276" key="GridCell.Tab.0.right" timestamp="1579114241776">
+      <screen x="0" y="0" width="3600" height="1080" />
+    </state>
+    <state width="1878" height="276" key="GridCell.Tab.0.right/0.0.3600.1080@0.0.3600.1080" timestamp="1579114241776" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>

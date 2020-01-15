@@ -138,7 +138,7 @@ type UpdateOrganizationRequest struct {
 }
 func (request *UpdateOrganizationRequest) UpdateOrganization() error {
 	sqlStmt := request.Db.Rebind(updateOrganizationSql)
-	_, err := request.Db.NamedExec(sqlStmt, request.InputOrganization)
+	res, err := request.Db.NamedExec(sqlStmt, request.InputOrganization)
 	if err != nil {
 		// A 404 Not Found is returned when no error is returned, and no Organization is returned either.
 		if err.Error() == "sql: no rows in result set" {
@@ -146,7 +146,12 @@ func (request *UpdateOrganizationRequest) UpdateOrganization() error {
 		}
 		return err
 	}
+	rowCount, err := res.RowsAffected()
+	if rowCount == 0 {
+		return nil
+	}
 
+	// Only save the updated org if the db updated a record
 	request.Organization = request.InputOrganization
 	return nil
 }

@@ -35,6 +35,7 @@ func (suite *OrganizationsTestSuite) BeforeTest(suiteName, testName string) {
 	if suite.DatabaseConnection == nil {
 		suite.SetupAllSuite()
 	}
+	helpers.CleanupTestDb(suite.DatabaseConnection)
 	helpers.LoadFixtures(suite.DatabaseConnection)
 }
 func (suite *OrganizationsTestSuite) AfterTest(suiteName, testName string) {
