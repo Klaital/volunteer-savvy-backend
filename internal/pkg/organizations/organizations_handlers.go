@@ -128,6 +128,30 @@ func DescribeOrganizationHandler(request *restful.Request, response *restful.Res
 	}
 }
 
+type UpdateOrganizationRequest struct {
+	// Input
+	Db *sqlx.DB
+	InputOrganization *Organization
+
+	// Output
+	Organization *Organization
+}
+func (request *UpdateOrganizationRequest) UpdateOrganization() error {
+	sqlStmt := request.Db.Rebind(updateOrganizationSql)
+	_, err := request.Db.NamedExec(sqlStmt, request.InputOrganization)
+	if err != nil {
+		// A 404 Not Found is returned when no error is returned, and no Organization is returned either.
+		if err.Error() == "sql: no rows in result set" {
+			return nil
+		}
+		return err
+	}
+
+	request.Organization = request.InputOrganization
+	return nil
+}
+
+
 func UpdateOrganizationHandler(request *restful.Request, response *restful.Response) {
 	logger := logrus.WithFields(logrus.Fields{
 		"operation": "UpdateOrganizationHandler",

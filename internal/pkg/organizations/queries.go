@@ -13,8 +13,8 @@ SET
 	authcode=:authcode,
 	contact_user_id=:contact_user_id,
 	lat=:lat,
-	lon=:lon,
-WHERE id=:id LIMIT 1`
+	lon=:lon
+WHERE id=:id`
 const deleteOrganizationNullFkeysSql = `
 	UPDATE sites SET organization_id=0 WHERE organization_id=:id; 
 	UPDATE users SET organization_id=0 WHERE organization_id=:id; 

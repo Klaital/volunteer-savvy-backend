@@ -38,3 +38,59 @@ func (suite *OrganizationsTestSuite) TestDescribeOrganizationsRequest_DescribeOr
 	suite.Nil(err, "Should return a nil error and a nil Organization")
 	suite.Nil(request.Organization, "Should return a nil error and a nil Organization")
 }
+
+func (suite *OrganizationsTestSuite) TestUpdateOrganizationsRequest_UpdateOrganization() {
+	request := UpdateOrganizationRequest{
+		Db: suite.DatabaseConnection,
+		InputOrganization: &Organization{
+			Id:            1,
+			Name:          "new organization name",
+			Slug:          "new-organization-slug",
+			Authcode:      "newauthcode",
+			ContactUserId: 0,
+			Latitude:      123.45,
+			Longitude:     -123.45,
+		},
+
+		// Output
+		Organization: nil,
+	}
+
+	err := request.UpdateOrganization()
+	suite.Nilf(err, "Error on UpdateOrganization(): %v", err)
+	suite.Equal(uint64(1), request.Organization.Id, "Organization ID not returned")
+	suite.Equal("new organization name", request.Organization.Name, "Organization Name not returned")
+	suite.Equal("new-organization-slug", request.Organization.Slug, "Organization Slug not returned")
+	suite.Equal("newauthcode", request.Organization.Authcode, "Organization authcode not returned")
+	suite.Equal(123.45, request.Organization.Latitude, "Organization Latitude not returned")
+	suite.Equal(-123.45, request.Organization.Longitude, "Organization Latitude not returned")
+
+	// Reload the organization from the DB to validate that everything was updated
+	updatedOrg, err := FindOrganization(1, suite.DatabaseConnection)
+	suite.Equal("new organization name", updatedOrg.Name, "Organization Name not returned")
+	suite.Equal("new-organization-slug", updatedOrg.Slug, "Organization Slug not returned")
+	suite.Equal("newauthcode", updatedOrg.Authcode, "Organization authcode not returned")
+	suite.Equal(123.45, updatedOrg.Latitude, "Organization Latitude not returned")
+	suite.Equal(-123.45, updatedOrg.Longitude, "Organization Latitude not returned")
+
+	// Test 2: Validate "Not Found" behavior
+	request = UpdateOrganizationRequest{
+		Db: suite.DatabaseConnection,
+		InputOrganization: &Organization{
+			Id:            200,
+			Name:          "asdf",
+			Slug:          "asdf",
+			Authcode:      "asdf",
+			ContactUserId: 0,
+			Latitude:      0,
+			Longitude:     0,
+		},
+
+		Organization: nil,
+	}
+
+	err = request.UpdateOrganization()
+	suite.Nil(err, "Should return a nil error and a nil Organization")
+	suite.Nil(request.Organization, "Should return a nil error and a nil Organization")
+}
+
