@@ -2,10 +2,11 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="564866d2-d96f-4b1d-935a-2053cb9e8a41" name="Default Changelist" comment="">
+      <change afterPath="$PROJECT_DIR$/docs/test_plan.md" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/internal/pkg/users/users_handlers.go" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/internal/pkg/users/users_test.go" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/internal/pkg/organizations/organizations_handlers.go" beforeDir="false" afterPath="$PROJECT_DIR$/internal/pkg/organizations/organizations_handlers.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/internal/pkg/organizations/organizations_handlers_test.go" beforeDir="false" afterPath="$PROJECT_DIR$/internal/pkg/organizations/organizations_handlers_test.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/internal/pkg/organizations/organizations_test.go" beforeDir="false" afterPath="$PROJECT_DIR$/internal/pkg/organizations/organizations_test.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/internal/pkg/server/server.go" beforeDir="false" afterPath="$PROJECT_DIR$/internal/pkg/server/server.go" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -76,7 +77,7 @@
       <recent name="$PROJECT_DIR$/internal/pkg/helpers" />
     </key>
   </component>
-  <component name="RunManager" selected="Go Test.go test organizations">
+  <component name="RunManager" selected="Go Test.go test users">
     <configuration name="Build VS Backend" type="GoApplicationRunConfiguration" factoryName="Go Application">
       <module name="volunteer-savvy-backend" />
       <working_directory value="$PROJECT_DIR$/" />
@@ -100,9 +101,21 @@
       <directory value="$PROJECT_DIR$/cmd/volunteer-savvy-backend" />
       <method v="2" />
     </configuration>
+    <configuration name="go test users" type="GoTestRunConfiguration" factoryName="Go Test">
+      <module name="volunteer-savvy-backend" />
+      <working_directory value="$PROJECT_DIR$/" />
+      <go_parameters value="-i" />
+      <framework value="gotest" />
+      <kind value="PACKAGE" />
+      <package value="github.com/klaital/volunteer-savvy-backend/internal/pkg/users" />
+      <directory value="$PROJECT_DIR$/internal/pkg/organizations" />
+      <filePath value="$PROJECT_DIR$/" />
+      <method v="2" />
+    </configuration>
     <list>
       <item itemvalue="Go Build.Build VS Backend" />
       <item itemvalue="Go Test.go test organizations" />
+      <item itemvalue="Go Test.go test users" />
     </list>
   </component>
   <component name="ServiceViewManager">
@@ -138,22 +151,26 @@
     <proxy>direct</proxy>
   </component>
   <component name="WindowStateProjectService">
-    <state width="1878" height="276" key="GridCell.Tab.0.bottom" timestamp="1579114241816">
+    <state x="2107" y="230" width="1081" height="664" key="#com.intellij.execution.impl.EditConfigurationsDialog" timestamp="1579118453048">
       <screen x="0" y="0" width="3600" height="1080" />
     </state>
-    <state width="1878" height="276" key="GridCell.Tab.0.bottom/0.0.3600.1080@0.0.3600.1080" timestamp="1579114241816" />
-    <state width="1878" height="276" key="GridCell.Tab.0.center" timestamp="1579114241736">
+    <state x="2107" y="230" width="1081" height="664" key="#com.intellij.execution.impl.EditConfigurationsDialog/0.0.3600.1080@0.0.3600.1080" timestamp="1579118453048" />
+    <state width="1878" height="276" key="GridCell.Tab.0.bottom" timestamp="1579114337258">
       <screen x="0" y="0" width="3600" height="1080" />
     </state>
-    <state width="1878" height="276" key="GridCell.Tab.0.center/0.0.3600.1080@0.0.3600.1080" timestamp="1579114241736" />
-    <state width="1878" height="276" key="GridCell.Tab.0.left" timestamp="1579114241695">
+    <state width="1878" height="276" key="GridCell.Tab.0.bottom/0.0.3600.1080@0.0.3600.1080" timestamp="1579114337258" />
+    <state width="1878" height="276" key="GridCell.Tab.0.center" timestamp="1579114337162">
       <screen x="0" y="0" width="3600" height="1080" />
     </state>
-    <state width="1878" height="276" key="GridCell.Tab.0.left/0.0.3600.1080@0.0.3600.1080" timestamp="1579114241695" />
-    <state width="1878" height="276" key="GridCell.Tab.0.right" timestamp="1579114241776">
+    <state width="1878" height="276" key="GridCell.Tab.0.center/0.0.3600.1080@0.0.3600.1080" timestamp="1579114337162" />
+    <state width="1878" height="276" key="GridCell.Tab.0.left" timestamp="1579114337121">
       <screen x="0" y="0" width="3600" height="1080" />
     </state>
-    <state width="1878" height="276" key="GridCell.Tab.0.right/0.0.3600.1080@0.0.3600.1080" timestamp="1579114241776" />
+    <state width="1878" height="276" key="GridCell.Tab.0.left/0.0.3600.1080@0.0.3600.1080" timestamp="1579114337121" />
+    <state width="1878" height="276" key="GridCell.Tab.0.right" timestamp="1579114337216">
+      <screen x="0" y="0" width="3600" height="1080" />
+    </state>
+    <state width="1878" height="276" key="GridCell.Tab.0.right/0.0.3600.1080@0.0.3600.1080" timestamp="1579114337216" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>

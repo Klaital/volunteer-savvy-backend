@@ -5,6 +5,7 @@ import (
 	"github.com/klaital/volunteer-savvy-backend/internal/pkg/filters"
 	"github.com/klaital/volunteer-savvy-backend/internal/pkg/organizations"
 	"github.com/klaital/volunteer-savvy-backend/internal/pkg/sites"
+	"github.com/klaital/volunteer-savvy-backend/internal/pkg/users"
 	"net/http"
 	"time"
 
@@ -280,16 +281,15 @@ func (server *Server) setupAPI() {
 	//		Returns(http.StatusUnauthorized, "Not logged in", nil).
 	//		Returns(http.StatusForbidden, "Logged-in user is not authorized to update this site", nil))
 	//
-	//service.Route(
-	//	service.GET("/users/").
-	//		//Filter(filters.RequireValidJWT).
-	//		//Filter(filters.RateLimitingFilter).
-	//		To(FindAllUsersHandler).
-	//		Doc("Fetch all users' details").
-	//		Produces(restful.MIME_JSON).
-	//		Writes(FindAllUsersResponse{}).
-	//		Writes(sites.Site{}).
-	//		Returns(http.StatusOK, "Site updated", sites.Site{}))
+	service.Route(
+		service.GET("/users/").
+			//Filter(filters.RequireValidJWT).
+			//Filter(filters.RateLimitingFilter).
+			To(users.ListUsersHandler).
+			Doc("Fetch all users' details").
+			Produces(restful.MIME_JSON).
+			Writes([]users.User{}).
+			Returns(http.StatusOK, "Got list of users", []users.User{}))
 	//service.Route(
 	//	service.GET("/users/{userGuid}").
 	//		//Filter(filters.RequireValidJWT).
