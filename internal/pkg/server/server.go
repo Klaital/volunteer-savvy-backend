@@ -31,7 +31,7 @@ func New(config *config.ServiceConfig) (*Server, error) {
 	// global filters can go here.  route specific filters go in their route definitions
 	// JWT handling is an example of a filter that needs to be route specific, since calls to the Swagger API would fail if it were global
 	server.container.Filter(JsonLoggingFilter)
-	server.container.Filter(SetRequestIDFilter)
+	server.container.Filter(server.SetRequestIDFilter)
 
 	// set up the single api we'll use for the example
 	server.setupAPI()

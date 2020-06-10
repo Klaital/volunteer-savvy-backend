@@ -89,9 +89,10 @@ func getOriginatingIP(req *restful.Request) (proxyExists bool, originatingIP str
 // SetRequestIDFilter generates a GUID identifying this specific HTTP request,
 // and sets it as an attribute on the request for server-side logging, and as
 // a header on the response.
-func SetRequestIDFilter(req *restful.Request, resp *restful.Response, chain *restful.FilterChain) {
+func (server *Server) SetRequestIDFilter(req *restful.Request, resp *restful.Response, chain *restful.FilterChain) {
+	// Configure this request's logger with a UUID
 	requestID := uuid.NewV4().String()
-	logger := log.New().WithField("RequestID", requestID)
+	logger := server.Config.Logger.WithField("RequestID", requestID)
 
 	req.SetAttribute("RequestID", requestID)
 	req.SetAttribute("Logger", logger)
