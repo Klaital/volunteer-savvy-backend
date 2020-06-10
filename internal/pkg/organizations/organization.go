@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"github.com/klaital/volunteer-savvy-backend/internal/pkg/config"
 	"github.com/klaital/volunteer-savvy-backend/internal/pkg/users"
 	"regexp"
 )
@@ -65,25 +66,32 @@ func New() *Organization {
 	}
 }
 
-func (o Organization) Validate() (valid bool, errs []error) {
-	errs = make([]error, 0)
+func (o Organization) Validate() (errs *config.ErrorSet) {
+	errSet := make([]error, 0)
 	if len(o.Name) == 0 {
-		errs = append(errs, errors.New("name must be present"))
+		errSet = append(errSet, errors.New("name must be present"))
 	}
 	if len(o.Slug) == 0 {
-		errs = append(errs, errors.New("slug must be present"))
+		errSet = append(errSet, errors.New("slug must be present"))
 	}
 	pattern, err := regexp.Compile("^[a-z0-9]+(?:-[a-z0-9]+)*$")
 	if err != nil {
-		errs = append(errs, fmt.Errorf("Failed to compile regex: %v", err))
-		return false, errs
+		errSet = append(errSet, fmt.Errorf("Failed to compile regex: %v", err))
+		return &config.ErrorSet{
+			Errors: errSet,
+		}
 	}
 	if !pattern.Match([]byte(o.Slug)) {
-		errs = append(errs, errors.New("slug must match pattern /^[a-z0-9]+(?:-[a-z0-9]+)*$/"))
+		errSet = append(errSet, errors.New("slug must match pattern /^[a-z0-9]+(?:-[a-z0-9]+)*$/"))
 	}
 	if len(o.Authcode) == 0 {
-		errs = append(errs, errors.New("authcode must be present"))
+		errSet = append(errSet, errors.New("authcode must be present"))
 	}
 
-	return len(errs) == 0, errs
+	if len(errSet) == 0 {
+		return nil
+	}
+	return &config.ErrorSet{
+		Errors: errSet,
+	}
 }

@@ -8,7 +8,29 @@ const findSiteSql = `
 		is_active 
 	FROM sites WHERE slug=? LIMIT 1
 `
-const findAllSitesSql = `
+
+const listAllSitesSql = `
+	SELECT 
+		sites.id, sites.slug, sites.name_l10n, sites.locale, 
+		sites.lat, sites.lon, sites.gplace_id, sites.street, 
+		sites.city, sites.state, sites.zip, sites.is_active,
+
+		users.user_guid, users.email,
+
+		daily_schedules.dotw_default, daily_schedules.override_date, 
+		daily_schedules.open_time, daily_schedules.close_time,
+		daily_schedules.is_open
+
+	FROM sites 
+		LEFT OUTER JOIN site_coordinators ON site_coordinators.site_id = sites.id
+		LEFT OUTER JOIN users ON site_coordinators.user_id = users.id 
+		LEFT OUTER JOIN daily_schedules on daily_schedules.site_id = sites.id
+`
+const describeSiteSql = listAllSitesSql + `
+	WHERE sites.slug = ?	
+`
+
+const listOrganizationSitesSql = `
 	SELECT 
 		sites.id, sites.slug, sites.name_l10n, sites.locale, 
 		sites.lat, sites.lon, sites.gplace_id, sites.street, 
@@ -26,9 +48,6 @@ const findAllSitesSql = `
 		LEFT OUTER JOIN daily_schedules on daily_schedules.site_id = sites.id
 	WHERE
 		sites.organization_id = ?
-`
-const findSingleSiteSql = findAllSitesSql + `
-	WHERE sites.slug = ?	
 `
 
 const selectSiteCoordinatorsForSiteSql = `

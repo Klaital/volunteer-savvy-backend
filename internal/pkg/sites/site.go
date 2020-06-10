@@ -80,25 +80,21 @@ type SiteCoordinator struct {
 	IsPrimary bool `db:"is_primary"`
 }
 
-func FindSite(slug string) (site *Site, err error) {
+func DescribeSite(ctx *config.Context, slug string) (site *Site, err error) {
 	// Setup
-	logger := log.WithFields(log.Fields{
+	logger := ctx.Logger.WithFields(log.Fields{
 		"operation": "FindSite",
 		"slug": slug,
 	})
 	logger.Debug("Starting queries for site data")
+	db := ctx.Config.GetDbConn()
 
-	svcConfig, err := config.GetServiceConfig()
-	if err != nil {
-		logger.Errorf("Service Config not loaded: %v", err)
-		return nil, err
-	}
-	rows := make([]FindAllSitesRow,0)
-	err = svcConfig.DatabaseConnection.Select(&rows,
-		svcConfig.DatabaseConnection.Rebind(findSingleSiteSql),
+	rows := make([]ListSitesRow,0)
+	err = db.Select(&rows,
+		db.Rebind(describeSiteSql),
 		slug)
 	if err != nil {
-		logger.Errorf("Failed to select all sites: %v", err)
+		logger.WithError(err).Error("Failed to select all sites")
 		return nil, err
 	}
 
@@ -117,21 +113,17 @@ func (site *Site) validate() bool {
 	}
 	return true
 }
-func (site *Site) CreateSite() error {
+func (site *Site) Create(ctx *config.Context) error {
 	// Setup
-	logger := log.WithFields(log.Fields{
-		"operation": "CreateSite",
+	logger := ctx.Logger.WithFields(log.Fields{
+		"operation": "Site.Create",
+		"SiteSlug": site.Slug,
 	})
 
-	svcConfig, err := config.GetServiceConfig()
-	if err != nil {
-		logger.Errorf("Service Config not loaded: %v", err)
-		return err
-	}
-	db := svcConfig.DatabaseConnection
+	db := ctx.Config.GetDbConn()
 	tx, err := db.Beginx()
 	if err != nil {
-		logger.Errorf("Failed to create transaction: %v", err)
+		logger.WithError(err).Error("Failed to create transaction")
 		return err
 	} else {
 		logger.Debug("Starting tx to create a site")
@@ -175,7 +167,7 @@ func (site *Site) CreateSite() error {
 	return nil
 }
 
-type FindAllSitesRow struct {
+type ListSitesRow struct {
 	Site
 
 	CoordinatorGuid sql.NullString `db:"user_guid"`
@@ -188,7 +180,7 @@ type FindAllSitesRow struct {
 	IsOpen   sql.NullBool `db:"is_open"`
 }
 
-func CoallateSiteSet(rows []FindAllSitesRow) []Site {
+func CoallateSiteSet(rows []ListSitesRow) []Site {
 	sites := make(map[string]*Site)
 
 	for _, row := range rows {
@@ -247,21 +239,19 @@ func CoallateSiteSet(rows []FindAllSitesRow) []Site {
 
 	return siteList
 }
-func FindAllSites(organizationId int) (sites []Site, err error) {
-	logger := log.WithFields(log.Fields{
-		"operation": "FindAllSites",
+func ListSites(ctx *config.Context) (sites []Site, err error) {
+	logger := ctx.Logger.WithFields(log.Fields{
+		"operation": "ListSites",
 	})
+	db := ctx.Config.GetDbConn()
+
+	// TODO: look up the logged-in user's Organization ID, and use it to filter here
 
 	// Fetch the Sites, Managers, and Calendars from the database
-	svcConfig, err := config.GetServiceConfig()
+	rows := make([]ListSitesRow,0)
+	err = db.Select(&rows, listAllSitesSql)
 	if err != nil {
-		logger.Errorf("Failed to load service config: %v")
-		return nil, err
-	}
-	rows := make([]FindAllSitesRow,0)
-	err = svcConfig.DatabaseConnection.Select(&rows, findAllSitesSql, organizationId)
-	if err != nil {
-		logger.Errorf("Failed to select all sites: %v", err)
+		logger.WithError(err).Error("Failed to select all sites")
 		return nil, err
 	}
 
@@ -272,20 +262,17 @@ func FindAllSites(organizationId int) (sites []Site, err error) {
 	return sites, nil
 }
 
-func DeleteSite(siteSlug string) error {
-	logger := log.WithFields(log.Fields{
+func DeleteSite(ctx *config.Context, siteSlug string) error {
+	// Setup
+	logger := ctx.Logger.WithFields(log.Fields{
 		"operation": "DeleteSite",
 		"SiteSlug": siteSlug,
 	})
 
-	svcConfig, err := config.GetServiceConfig()
-	if err != nil {
-		logger.Errorf("Failed to load service config: %v")
-		return err
-	}
-	db := svcConfig.DatabaseConnection
+	db := ctx.Config.GetDbConn()
 
-	_, err = db.Exec(db.Rebind(deleteSiteSql), siteSlug)
+	// Execute the site deletion
+	_, err := db.Exec(db.Rebind(deleteSiteSql), siteSlug)
 	if err != nil {
 		logger.Errorf("Failed to delete site: %v", err)
 		return err
@@ -295,19 +282,21 @@ func DeleteSite(siteSlug string) error {
 	return nil
 }
 
-func (site *Site) UpdateSiteAdmin(updateData *UpdateSiteRequestAdmin) error {
-	logger := log.WithFields(log.Fields{
+type UpdateSiteRequestAdmin struct {
+	Site
+}
+func (site *Site) UpdateSiteAdmin(ctx *config.Context, updateData *UpdateSiteRequestAdmin) error {
+	logger := ctx.Logger.WithFields(log.Fields{
 		"operation": "DeleteSite",
 		"SiteSlug": site.Slug,
 	})
 
-	svcConfig, err := config.GetServiceConfig()
-	if err != nil {
-		logger.Errorf("Failed to load service config: %v")
-		return err
-	}
-	db := svcConfig.DatabaseConnection
+	db := ctx.Config.GetDbConn()
 	sqlStmt := db.Rebind(updateSiteSql)
-	_, err = db.NamedExec(sqlStmt, site)
+	_, err := db.NamedExec(sqlStmt, site)
+	if err != nil {
+		// TODO: discern between "not found" and "db error"
+		logger.WithError(err).Error("Failed to update site")
+	}
 	return err
 }

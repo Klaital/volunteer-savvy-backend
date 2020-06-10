@@ -4,7 +4,6 @@ import (
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
-	"github.com/jmoiron/sqlx"
 	"github.com/klaital/volunteer-savvy-backend/internal/pkg/config"
 	"github.com/klaital/volunteer-savvy-backend/internal/pkg/server"
 	_ "github.com/lib/pq"
@@ -26,20 +25,14 @@ func main() {
 		logger.Debugf("Loaded service config: %+v", cfg)
 	}
 
-	if cfg.Debug {
-		log.SetLevel(log.DebugLevel)
-	} else {
-		log.SetLevel(log.InfoLevel)
-	}
-
-	db, err := sqlx.Connect(cfg.DatabaseDriver, cfg.DatabaseDSN)
-	for err != nil {
-		log.Warnf("Waiting for database to come up: %v", err)
+	// Set up the database
+	db := cfg.GetDbConn()
+	for db == nil {
+		log.Warnf("Waiting for database to come up")
 		time.Sleep(2000 * time.Millisecond)
-		db, err = sqlx.Connect(cfg.DatabaseDriver, cfg.DatabaseDSN)
+		db = cfg.GetDbConn()
 	}
 	defer db.Close()
-	cfg.DatabaseConnection = db
 
 	log.Debugf("Migrating database...")
 	driver, err := postgres.WithInstance(db.DB, &postgres.Config{})
@@ -60,9 +53,11 @@ func main() {
 		}
 	}
 
+	// Initialize the server
 	s, err := server.New(cfg)
 	if err != nil {
 		logger.Fatalf("Failed to create server struct: %v", err)
 	}
+	// Actually start the application
 	s.Serve()
 }

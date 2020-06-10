@@ -14,3 +14,8 @@
 # Jetbrains
 .idea/workspace.xml
 
+# naiive go build output
+./main
+
+# actual binary output dir
+bin/*

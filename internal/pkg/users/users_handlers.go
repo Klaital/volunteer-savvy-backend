@@ -45,7 +45,7 @@ func ListUsersHandler(request *restful.Request, response *restful.Response) {
 		return
 	}
 	requestConfig := ListUsersRequest{
-		Db:            appConfig.DatabaseConnection,
+		Db:            appConfig.GetDbConn(),
 	}
 
 	err = requestConfig.ListUsers()

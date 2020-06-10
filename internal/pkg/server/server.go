@@ -2,11 +2,11 @@ package server
 
 import (
 	"fmt"
-	"github.com/klaital/volunteer-savvy-backend/internal/pkg/filters"
 	"github.com/klaital/volunteer-savvy-backend/internal/pkg/organizations"
 	"github.com/klaital/volunteer-savvy-backend/internal/pkg/sites"
 	"github.com/klaital/volunteer-savvy-backend/internal/pkg/users"
 	"net/http"
+	"path"
 	"time"
 
 	"github.com/emicklei/go-restful"
@@ -30,17 +30,19 @@ func New(config *config.ServiceConfig) (*Server, error) {
 
 	// global filters can go here.  route specific filters go in their route definitions
 	// JWT handling is an example of a filter that needs to be route specific, since calls to the Swagger API would fail if it were global
-	server.container.Filter(filters.JSONCommonLogger)
+	server.container.Filter(JsonLoggingFilter)
+	server.container.Filter(SetRequestIDFilter)
 
 	// set up the single api we'll use for the example
 	server.setupAPI()
 
 	// Expose Swagger-UI
-	http.Handle("/apidocs/", http.StripPrefix("/apidocs/", http.FileServer(http.Dir("~/bin/swagger-ui/dist"))))
+	//http.Handle("/apidocs/", http.StripPrefix("/apidocs/", http.FileServer(http.Dir("~/bin/swagger-ui/dist"))))
 
 	rootService := new(restful.WebService)
 
 	server.addHealthCheck(rootService)
+	server.addSwaggerSupport()
 	server.container.Add(rootService)
 
 	return server, nil
@@ -57,7 +59,7 @@ func (server *Server) Serve() {
 
 	ipPort := fmt.Sprintf(":%d", server.Config.Port)
 
-	if server.Config.Debug {
+	if server.Config.LogLevel == "debug" {
 		log.Infof("Server is launching in debug mode")
 	}
 
@@ -79,18 +81,36 @@ func (server *Server) Serve() {
 	}
 }
 
-//func (server *Server) addSwaggerSupport() {
-//	swaggerConfig := swagger.Config{
-//		WebServices:     server.container.RegisteredWebServices(),
-//		ApiPath:         server.Config.BasePath + server.Config.APIPath,
-//		SwaggerPath:     server.Config.BasePath + server.Config.SwaggerPath,
-//		SwaggerFilePath: server.Config.SwaggerFilePath,
-//	}
-//
-//	swagger.RegisterSwaggerService(swaggerConfig, server.container)
-//
-//}
+func (server *Server) addSwaggerSupport() {
+	openAPIService := restfulspec.NewOpenAPIService(restfulspec.Config{
+		WebServices:     server.container.RegisteredWebServices(),
+		APIPath:         server.Config.BasePath + server.Config.APIPath,
+	})
+	log.Infof("Enabling swagger UI at %s", server.Config.BasePath + server.Config.SwaggerPath)
+	http.Handle(
+		server.Config.BasePath + server.Config.SwaggerPath,
+		http.StripPrefix(
+			server.Config.BasePath + server.Config.SwaggerPath,
+			http.FileServer(http.Dir("/home/kit/devel/volunteer-savvy-backend/web/swagger-ui/dist"))))
 
+	cors := restful.CrossOriginResourceSharing{
+		AllowedHeaders: []string{"Content-Type", "Accept"},
+		AllowedMethods: []string{"GET", "POST", "PUT", "DELETE"},
+		CookiesAllowed: false,
+		Container: server.container,
+	}
+	server.container.Filter(cors.Filter)
+	server.container.Add(openAPIService)
+}
+
+func (server *Server) staticFileHandler(req *restful.Request, resp *restful.Response) {
+	localFilePath := path.Join(server.Config.StaticContentPath, req.PathParameter("subpath"))
+	log.WithField("localPath", localFilePath).Debug("Serving static file")
+	http.ServeFile(
+		resp.ResponseWriter,
+		req.Request,
+		localFilePath)
+}
 func (server *Server) addHealthCheck(service *restful.WebService) {
 	service.Route(service.GET(server.Config.HealthCheckPath).To(server.healthCheckHandler))
 }
@@ -98,7 +118,7 @@ func (server *Server) addHealthCheck(service *restful.WebService) {
 func (server *Server) healthCheckHandler(request *restful.Request, response *restful.Response) {
 
 	// Ensure that the database connection is useable
-	if server.Config.DatabaseConnection == nil {
+	if server.Config.GetDbConn() == nil {
 		response.WriteHeader(http.StatusInternalServerError)
 		log.Error("Database connection not initialized")
 		return
@@ -114,15 +134,21 @@ func (server *Server) setupAPI() {
 	service.Path(server.Config.BasePath).ApiVersion("0.0.0").Doc("Volunteer-Savvy Backend")
 
 	//
+	// Static File Server
+	//
+	service.Route(
+		service.GET("/{subpath:*}").To(server.staticFileHandler))
+
+	//
 	// Organizations APIs
 	//
 	service.Route(
 		service.GET("/organizations/").
 			//Filter(filters.RateLimitingFilter).
-			To(organizations.ListOrganizationsHandler).
+			To(server.ListOrganizationsHandler).
 			Doc("List Organizations").
 			Produces(restful.MIME_JSON).
-			Writes([]organizations.Organization{}).
+			Writes(ListOrganizationsResponse{}).
 			Returns(http.StatusOK, "Fetched all organizations", []organizations.Organization{}))
 	// TODO: CreateOrganization needs a SuperAdmin permissions check filter
 	service.Route(
@@ -130,7 +156,7 @@ func (server *Server) setupAPI() {
 			//Filter(filters.RequireValidJWT).
 			//Filter(filters.RateLimitingFilter).
 			//Filter(filters.RequireSuperAdminPermission).
-			To(organizations.CreateOrganizationHandler).
+			To(server.CreateOrganizationHandler).
 			Doc("Create Organization").
 			Produces(restful.MIME_JSON).
 			Consumes(restful.MIME_JSON).
@@ -138,22 +164,22 @@ func (server *Server) setupAPI() {
 			Writes(organizations.Organization{}).
 			Returns(http.StatusOK, "Organization created.", organizations.Organization{}))
 	service.Route(
-		service.GET("/organizations/{organizationId}").
+		service.GET("/organizations/{organizationID}").
 			//Filter(filters.RateLimitingFilter).
-			To(organizations.DescribeOrganizationHandler).
+			To(server.DescribeOrganizationHandler).
 			Doc("Describe Organization").
-			Param(restful.PathParameter("organizationId", "ID taken from ListOrganizations")).
+			Param(restful.PathParameter("organizationID", "ID taken from ListOrganizations")).
 			Produces(restful.MIME_JSON).
 			Writes(organizations.Organization{}).
 			Returns(http.StatusOK, "Organization details fetched", organizations.Organization{}).
 			Returns(http.StatusNotFound, "Invalid Organization ID", nil))
 	// TODO: UpdateOrganization needs a SuperAdmin permissions check filter
 	service.Route(
-		service.PUT("/organizations/{organizationId}").
+		service.PUT("/organizations/{organizationID}").
 			//Filter(filters.RequireValidJWT).
 			//Filter(filters.RateLimitingFilter).
 			//Filter(filters.RequireSuperAdminPermission).
-			To(organizations.UpdateOrganizationHandler).
+			To(server.UpdateOrganizationHandler).
 			Doc("Update Organization").
 			Param(restful.PathParameter("organizationId", "ID taken from ListOrganizations")).
 			Consumes(restful.MIME_JSON).
@@ -165,13 +191,13 @@ func (server *Server) setupAPI() {
 			Returns(http.StatusNotFound, "Invalid Organization ID", nil))
 	// TODO: DeleteOrganizations needs a SuperAdmin permissions check filter
 	service.Route(
-		service.DELETE("/organizations/{organizationId}").
+		service.DELETE("/organizations/{organizationID}").
 			//Filter(filters.RequireValidJWT).
 			//Filter(filters.RateLimitingFilter).
 			//Filter(filters.RequireSuperAdminPermission).
-			To(organizations.DestroyOrganizationHandler).
+			To(server.DeleteOrganizationHandler).
 			Doc("Destroy Organization").
-			Param(restful.PathParameter("organizationId", "ID taken from ListOrganizations")).
+			Param(restful.PathParameter("organizationID", "ID taken from ListOrganizations")).
 			Returns(http.StatusOK, "Organization deleted", nil).
 			Returns(http.StatusNotFound, "Invalid Organization ID", nil))
 
@@ -181,21 +207,21 @@ func (server *Server) setupAPI() {
 	service.Route(
 		service.GET("/sites/").
 			//Filter(filters.RateLimitingFilter).
-			To(sites.FindAllSitesHandler).
+			To(server.ListSitesHandler).
 			Doc("Fetch all sites").
 			Produces(restful.MIME_JSON).
-			Writes(sites.FindAllSitesResponse{}).
-			Returns(http.StatusOK, "Fetched all sites", sites.FindAllSitesResponse{}))
+			Writes(ListSitesResponse{}).
+			Returns(http.StatusOK, "Fetched all sites", ListSitesResponse{}))
 	service.Route(
 		service.POST("/sites/").
 			//Filter(filters.RequireValidJWT).
 			//Filter(filters.RateLimitingFilter).
 			//Filter(filters.RequireAdminPermission).
-			To(sites.CreateSiteHandler).
+			To(server.CreateSiteHandler).
 			Doc("Fetch all sites").
 			Produces(restful.MIME_JSON).
 			Consumes(restful.MIME_JSON).
-			Reads(sites.CreateSitesRequest{}).
+			Reads(sites.Site{}).
 			Returns(http.StatusOK, "Created site", nil).
 			Returns(http.StatusUnauthorized, "Not logged in", nil).
 			Returns(http.StatusForbidden, "Logged-in user is not authorized to create sites", nil))
@@ -203,7 +229,7 @@ func (server *Server) setupAPI() {
 		service.GET("/sites/{siteSlug}").
 			//Filter(filters.RequireValidJWT).
 			//Filter(filters.RateLimitingFilter).
-			To(sites.FindSiteHandler).
+			To(server.DescribeSiteHandler).
 			Doc("Fetch all sites").
 			Produces(restful.MIME_JSON).
 			Writes(sites.Site{}).
@@ -213,7 +239,7 @@ func (server *Server) setupAPI() {
 			//Filter(filters.RequireValidJWT).
 			//Filter(filters.RateLimitingFilter).
 			//Filter(filters.RequireSiteUpdatePermission).
-			To(sites.UpdateSiteHandler).
+			To(server.UpdateSiteHandler).
 			Doc("Update site config").
 			Produces(restful.MIME_JSON).
 			Consumes(restful.MIME_JSON).
@@ -227,7 +253,7 @@ func (server *Server) setupAPI() {
 			//Filter(filters.RequireValidJWT).
 			//Filter(filters.RateLimitingFilter).
 			//Filter(filters.RequireAdminPermission).
-			To(sites.DeleteSiteHandler).
+			To(server.DeleteSiteHandler).
 			Doc("Delete site and related calendars").
 			Produces(restful.MIME_JSON).
 			Returns(http.StatusOK, "Site deleted", nil).
@@ -327,15 +353,4 @@ func (server *Server) setupAPI() {
 	//		Returns(http.StatusForbidden, "Logged-in user is not authorized to update this user", nil))
 
 	server.container.Add(service)
-
-	version := "0.0.0"
-
-
-	swaggerConfig := restfulspec.Config{
-		APIPath:                       "/apidocs.json",
-		WebServices:                   restful.RegisteredWebServices(),
-		DisableCORS:                   true,
-		APIVersion:                    version,
-	}
-	server.container.Add(restfulspec.NewOpenAPIService(swaggerConfig))
 }
