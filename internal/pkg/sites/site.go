@@ -1,10 +1,12 @@
 package sites
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
-	"github.com/klaital/volunteer-savvy-backend/internal/pkg/config"
+	"github.com/jmoiron/sqlx"
+	"github.com/klaital/volunteer-savvy-backend/internal/pkg/filters"
 	"github.com/klaital/volunteer-savvy-backend/internal/pkg/users"
 	log "github.com/sirupsen/logrus"
 )
@@ -80,14 +82,11 @@ type SiteCoordinator struct {
 	IsPrimary bool `db:"is_primary"`
 }
 
-func DescribeSite(ctx *config.Context, slug string) (site *Site, err error) {
-	// Setup
-	logger := ctx.Logger.WithFields(log.Fields{
+func DescribeSite(ctx context.Context, db *sqlx.DB, slug string) (site *Site, err error) {
+	logger := filters.GetContextLogger(ctx).WithFields(log.Fields{
 		"operation": "FindSite",
 		"slug": slug,
 	})
-	logger.Debug("Starting queries for site data")
-	db := ctx.Config.GetDbConn()
 
 	rows := make([]ListSitesRow,0)
 	err = db.Select(&rows,
@@ -113,14 +112,13 @@ func (site *Site) validate() bool {
 	}
 	return true
 }
-func (site *Site) Create(ctx *config.Context) error {
+func (site *Site) Create(ctx context.Context, db *sqlx.DB) error {
 	// Setup
-	logger := ctx.Logger.WithFields(log.Fields{
+	logger := filters.GetContextLogger(ctx).WithFields(log.Fields{
 		"operation": "Site.Create",
 		"SiteSlug": site.Slug,
 	})
 
-	db := ctx.Config.GetDbConn()
 	tx, err := db.Beginx()
 	if err != nil {
 		logger.WithError(err).Error("Failed to create transaction")
@@ -239,11 +237,10 @@ func CoallateSiteSet(rows []ListSitesRow) []Site {
 
 	return siteList
 }
-func ListSites(ctx *config.Context) (sites []Site, err error) {
-	logger := ctx.Logger.WithFields(log.Fields{
+func ListSites(ctx context.Context, db *sqlx.DB) (sites []Site, err error) {
+	logger := filters.GetContextLogger(ctx).WithFields(log.Fields{
 		"operation": "ListSites",
 	})
-	db := ctx.Config.GetDbConn()
 
 	// TODO: look up the logged-in user's Organization ID, and use it to filter here
 
@@ -262,14 +259,12 @@ func ListSites(ctx *config.Context) (sites []Site, err error) {
 	return sites, nil
 }
 
-func DeleteSite(ctx *config.Context, siteSlug string) error {
+func DeleteSite(ctx context.Context, db *sqlx.DB, siteSlug string) error {
 	// Setup
-	logger := ctx.Logger.WithFields(log.Fields{
+	logger := filters.GetContextLogger(ctx).WithFields(log.Fields{
 		"operation": "DeleteSite",
 		"SiteSlug": siteSlug,
 	})
-
-	db := ctx.Config.GetDbConn()
 
 	// Execute the site deletion
 	_, err := db.Exec(db.Rebind(deleteSiteSql), siteSlug)
@@ -285,18 +280,23 @@ func DeleteSite(ctx *config.Context, siteSlug string) error {
 type UpdateSiteRequestAdmin struct {
 	Site
 }
-func (site *Site) UpdateSiteAdmin(ctx *config.Context, updateData *UpdateSiteRequestAdmin) error {
-	logger := ctx.Logger.WithFields(log.Fields{
+func (site *Site) UpdateSiteAdmin(ctx context.Context, db *sqlx.DB, updateData *UpdateSiteRequestAdmin) error {
+	logger := filters.GetContextLogger(ctx).WithFields(log.Fields{
 		"operation": "DeleteSite",
 		"SiteSlug": site.Slug,
 	})
 
-	db := ctx.Config.GetDbConn()
 	sqlStmt := db.Rebind(updateSiteSql)
 	_, err := db.NamedExec(sqlStmt, site)
 	if err != nil {
-		// TODO: discern between "not found" and "db error"
-		logger.WithError(err).Error("Failed to update site")
+		if err == sql.ErrNoRows {
+			logger.Debug("Site does not exist")
+		} else {
+			logger.WithError(err).Error("Failed to update site")
+		}
+		return err
 	}
-	return err
+
+	// Success
+	return nil
 }

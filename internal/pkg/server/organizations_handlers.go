@@ -1,28 +1,119 @@
 package server
 
 import (
-	"context"
+	"database/sql"
+	"errors"
 	"github.com/emicklei/go-restful"
-	"github.com/klaital/volunteer-savvy-backend/internal/pkg/config"
+	"github.com/jmoiron/sqlx"
+	"github.com/klaital/volunteer-savvy-backend/internal/pkg/filters"
 	"github.com/klaital/volunteer-savvy-backend/internal/pkg/organizations"
+	"github.com/klaital/volunteer-savvy-backend/internal/pkg/version"
 	"github.com/sirupsen/logrus"
 	"net/http"
 	"strconv"
 )
 
+type OrganizationsServer struct {
+	BasePath string
+	ApiVersion string
+	Db *sqlx.DB
+}
+
+func NewOrganizationsServer(db *sqlx.DB) *OrganizationsServer {
+	return &OrganizationsServer{
+		BasePath:   "/vs",
+		ApiVersion: "0.0.0",
+		Db:         db,
+	}
+}
+
+//
+// Call this in the server setup function
+//
+func (server *OrganizationsServer) GetOrganizationsAPI() *restful.WebService{
+
+	service := new(restful.WebService)
+	service.Path(server.BasePath + "/organizations").ApiVersion(server.ApiVersion).Doc("Volunteer-Savvy Backend")
+
+	//
+	// Organizations APIs
+	//
+	service.Route(
+		service.GET("/").
+			//Filter(filters.RateLimitingFilter).
+			To(server.ListOrganizationsHandler).
+			Doc("List Organizations").
+			Produces(restful.MIME_JSON).
+			Writes(ListOrganizationsResponse{}).
+			Returns(http.StatusOK, "Fetched all organizations", []organizations.Organization{}))
+	// TODO: CreateOrganization needs a SuperAdmin permissions check filter
+	service.Route(
+		service.POST("/").
+			//Filter(filters.RequireValidJWT).
+			//Filter(filters.RateLimitingFilter).
+			//Filter(filters.RequireSuperAdminPermission).
+			To(server.CreateOrganizationHandler).
+			Doc("Create Organization").
+			Produces(restful.MIME_JSON).
+			Consumes(restful.MIME_JSON).
+			Reads(organizations.Organization{}).
+			Writes(organizations.Organization{}).
+			Returns(http.StatusOK, "Organization created.", organizations.Organization{}))
+	service.Route(
+		service.GET("/{organizationID}").
+			//Filter(filters.RateLimitingFilter).
+			To(server.DescribeOrganizationHandler).
+			Doc("Describe Organization").
+			Param(restful.PathParameter("organizationID", "ID taken from ListOrganizations")).
+			Produces(restful.MIME_JSON).
+			Writes(organizations.Organization{}).
+			Returns(http.StatusOK, "Organization details fetched", organizations.Organization{}).
+			Returns(http.StatusNotFound, "Invalid Organization ID", nil))
+	// TODO: UpdateOrganization needs a SuperAdmin permissions check filter
+	service.Route(
+		service.PUT("/{organizationID}").
+			//Filter(filters.RequireValidJWT).
+			//Filter(filters.RateLimitingFilter).
+			//Filter(filters.RequireSuperAdminPermission).
+			To(server.UpdateOrganizationHandler).
+			Doc("Update Organization").
+			Param(restful.PathParameter("organizationId", "ID taken from ListOrganizations")).
+			Consumes(restful.MIME_JSON).
+			Produces(restful.MIME_JSON).
+			Reads(organizations.Organization{}).
+			Writes(organizations.Organization{}).
+			Returns(http.StatusOK, "Organization details updated", organizations.Organization{}).
+			Returns(http.StatusBadRequest, "Unable to set the requested values.", nil).
+			Returns(http.StatusNotFound, "Invalid Organization ID", nil))
+	// TODO: DeleteOrganizations needs a SuperAdmin permissions check filter
+	service.Route(
+		service.DELETE("/{organizationID}").
+			//Filter(filters.RequireValidJWT).
+			//Filter(filters.RateLimitingFilter).
+			//Filter(filters.RequireSuperAdminPermission).
+			To(server.DeleteOrganizationHandler).
+			Doc("Destroy Organization").
+			Param(restful.PathParameter("organizationID", "ID taken from ListOrganizations")).
+			Returns(http.StatusOK, "Organization deleted", nil).
+			Returns(http.StatusNotFound, "Invalid Organization ID", nil))
+
+	return service
+}
 type ListOrganizationsResponse struct {
 	Organizations []organizations.Organization `json:"organizations"`
 }
-func (server *Server) ListOrganizationsHandler(request *restful.Request, response *restful.Response) {
+func (server *OrganizationsServer) ListOrganizationsHandler(request *restful.Request, response *restful.Response) {
 	// Set up the context for this request thread
-	ctx := config.NewContext(context.Background(), server.Config)
-	ctx.Logger = request.Attribute("Logger").(*logrus.Entry)
+	ctx := filters.GetRequestContext(request)
+	logger := filters.GetContextLogger(ctx).WithFields(logrus.Fields{
+		"operation": "ListOrganizationsHandler",
+	})
 
 	// TODO: get logged-in user and add it to the context so that permissions and scope can be determined.
-	orgs, err := organizations.ListOrganizations(ctx)
+	orgs, err := organizations.ListOrganizations(ctx, db)
 
 	if err != nil {
-		server.Config.Logger.WithError(err).Error("Failed to fetch organizations list")
+		logger.WithError(err).Error("Failed to fetch organizations list")
 		response.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -34,38 +125,50 @@ func (server *Server) ListOrganizationsHandler(request *restful.Request, respons
 	}
 	err = response.WriteEntity(responseBody)
 	if err != nil {
-		server.Config.Logger.WithError(err).Error("Failed to write response payload")
+		logger.WithError(err).Error("Failed to write response payload")
 		response.WriteHeader(http.StatusInternalServerError)
 	}
 }
 
-func (server *Server) DescribeOrganizationHandler(request *restful.Request, response *restful.Response) {
-	// Set up the context for this request thread
-	ctx := config.NewContext(context.Background(), server.Config)
-	ctx.Logger = request.Attribute("Logger").(*logrus.Entry)
-
+func (server *OrganizationsServer) DescribeOrganizationHandler(request *restful.Request, response *restful.Response) {
 	orgIDstr := request.PathParameter("organizationID")
+
+	// Set up the context for this request thread
+	ctx := filters.GetRequestContext(request)
+	logger := filters.GetContextLogger(ctx).WithFields(logrus.Fields{
+		"operation": "DescribeOrganizationsHandler",
+		"OrganizationID.input": orgIDstr,
+	})
+
 	if len(orgIDstr) == 0 {
-		ctx.Logger.Warn("This shouldn't happen. An empty organization ID has been passed to DescribeOrganizationHandler")
+		logger.Warn("This shouldn't happen. An empty organization ID has been passed to DescribeOrganizationHandler")
 		response.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 	orgID, err := strconv.Atoi(orgIDstr)
+	logger = logger.WithField("OrganizationID", orgID)
 	if err != nil {
-		ctx.Logger.WithField("orgID", orgIDstr).WithError(err).Error("Invalid org ID")
+		logger.WithError(err).Error("Invalid org ID")
 		response.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
-
+	if orgID <= 0 {
+		logger.WithError(errors.New("invalid org ID given")).Debug("invalid org ID")
+		response.WriteHeader(http.StatusBadRequest)
+		return
+	}
 
 	// TODO: get logged-in user and add it to the context so that permissions and scope can be determined.
 
 	// Fetch the organization data
-	org, err := organizations.DescribeOrganization(ctx, int64(orgID))
-
+	org, err := organizations.DescribeOrganization(ctx, db, int64(orgID))
 	if err != nil {
-		ctx.Logger.WithError(err).Error("Failed to fetch organization")
+		if err == sql.ErrNoRows {
+			response.WriteHeader(http.StatusNotFound)
+			return
+		}
+		logger.WithError(err).Error("Failed to fetch organization")
 		response.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -73,29 +176,33 @@ func (server *Server) DescribeOrganizationHandler(request *restful.Request, resp
 	// Format and send the response
 	err = response.WriteEntity(org)
 	if err != nil {
-		ctx.Logger.WithError(err).Error("Failed to serialize organization")
+		logger.WithError(err).Error("Failed to serialize organization")
 		response.WriteHeader(http.StatusInternalServerError)
 	}
 }
 
-func (server *Server) CreateOrganizationHandler(request *restful.Request, response *restful.Response) {
+func (server *OrganizationsServer) CreateOrganizationHandler(request *restful.Request, response *restful.Response) {
 	// Set up the context for this request thread
-	ctx := config.NewContext(context.Background(), server.Config)
-	ctx.Logger = request.Attribute("Logger").(*logrus.Entry)
+	ctx := filters.GetRequestContext(request)
+	logger := filters.GetContextLogger(ctx).WithFields(logrus.Fields{
+		"operation": "CreateOrganizationHandler",
+	})
 
 	newOrg := organizations.New()
 	err := request.ReadEntity(newOrg)
 	if err != nil {
 		// TODO: maybe do input validation in a filter function?
-		server.Config.Logger.WithError(err).Error("Failed to deserialize organization")
-		if server.Config.LogLevel == "debug" {
+		logger.WithError(err).Error("Failed to deserialize organization")
+		if logger.Level == logrus.DebugLevel {
 			err = response.WriteError(http.StatusBadRequest, err)
 			if err != nil {
-				server.Config.Logger.WithError(err).Error("Failed to serialize error")
+				logger.WithError(err).Error("Failed to serialize error")
 				response.WriteHeader(http.StatusBadRequest)
+				return
 			}
 		} else {
 			response.WriteHeader(http.StatusBadRequest)
+			return
 		}
 		return
 	}
@@ -106,8 +213,8 @@ func (server *Server) CreateOrganizationHandler(request *restful.Request, respon
 	// Check whether the requested values form a valid Organization
 	errorSet := newOrg.Validate()
 	if errorSet != nil {
-		ctx.Logger.WithError(errorSet.Errors[0]).Errorf("Specified org is not valid - %s", errorSet.Error())
-		if ctx.Config.Logger.Level == logrus.DebugLevel {
+		logger.WithError(errorSet.Errors[0]).Errorf("Specified org is not valid - %s", errorSet.Error())
+		if logger.Level == logrus.DebugLevel {
 			response.WriteError(http.StatusBadRequest, errorSet)
 		} else {
 			response.WriteHeader(http.StatusBadRequest)
@@ -118,7 +225,7 @@ func (server *Server) CreateOrganizationHandler(request *restful.Request, respon
 	// Publish the new Org to the DB
 	err = newOrg.Create(ctx)
 	if err != nil {
-		server.Config.Logger.WithError(err).Error("Failed to create organization")
+		logger.WithError(err).Error("Failed to create organization")
 		response.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -126,19 +233,22 @@ func (server *Server) CreateOrganizationHandler(request *restful.Request, respon
 	// Format and send the response
 	err = response.WriteEntity(newOrg)
 	if err != nil {
-		server.Config.Logger.WithError(err).Error("Failed to serialize organization")
+		logger.WithError(err).Error("Failed to serialize organization")
 		response.WriteHeader(http.StatusInternalServerError)
 	}
 }
 
 
-func (server *Server) UpdateOrganizationHandler(request *restful.Request, response *restful.Response) {
-	ctx := config.NewContext(context.Background(), server.Config)
-	ctx.Logger = request.Attribute("Logger").(*logrus.Entry)
-
+func (server *OrganizationsServer) UpdateOrganizationHandler(request *restful.Request, response *restful.Response) {
 	orgID := request.PathParameter("organizationID")
+	ctx := filters.GetRequestContext(request)
+	logger := filters.GetContextLogger(ctx).WithFields(logrus.Fields{
+		"operation": "UpdateOrganizationHandler",
+		"OrganizationID.input": orgID,
+	})
+
 	if len(orgID) == 0 {
-		ctx.Logger.Warn("This shouldn't happen. An empty organization ID has been passed to UpdateOrganizationHandler")
+		logger.Warn("This shouldn't happen. An empty organization ID has been passed to UpdateOrganizationHandler")
 		response.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -147,11 +257,11 @@ func (server *Server) UpdateOrganizationHandler(request *restful.Request, respon
 	err := request.ReadEntity(newOrg)
 	if err != nil {
 		// TODO: maybe do input validation in a filter function?
-		ctx.Logger.WithError(err).Error("Failed to deserialize organization input")
-		if server.Config.LogLevel == "debug" {
+		logger.WithError(err).Error("Failed to deserialize organization input")
+		if logger.Level == logrus.DebugLevel {
 			err = response.WriteError(http.StatusBadRequest, err)
 			if err != nil {
-				ctx.Logger.WithError(err).Error("Failed to serialize error")
+				logger.WithError(err).Error("Failed to serialize error")
 				response.WriteHeader(http.StatusBadRequest)
 			}
 		} else {
@@ -166,7 +276,7 @@ func (server *Server) UpdateOrganizationHandler(request *restful.Request, respon
 	// Publish the updates to the DB
 	err = newOrg.Update(ctx)
 	if err != nil {
-		ctx.Logger.WithError(err).Error("Failed to create organization")
+		logger.WithError(err).Error("Failed to create organization")
 		response.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -174,27 +284,35 @@ func (server *Server) UpdateOrganizationHandler(request *restful.Request, respon
 	// Format and send the response
 	err = response.WriteEntity(newOrg)
 	if err != nil {
-		ctx.Logger.WithError(err).Error("Failed to serialize organization")
+		logger.WithError(err).Error("Failed to serialize organization")
 		response.WriteHeader(http.StatusInternalServerError)
 	}
 }
 
-func (server *Server) DeleteOrganizationHandler(request *restful.Request, response *restful.Response) {
-	ctx := config.NewContext(context.Background(), server.Config)
-	ctx.Logger = request.Attribute("Logger").(*logrus.Entry)
+func (server *OrganizationsServer)  DeleteOrganizationHandler(request *restful.Request, response *restful.Response) {
+	orgIDstr := request.PathParameter("organizationID")
+	ctx := filters.GetRequestContext(request)
+	logger := filters.GetContextLogger(ctx).WithFields(logrus.Fields{
+		"operation": "DeleteOrganizationHandler",
+		"OrganizationID.input": orgIDstr,
+	})
 
 	// Get the ID for the requested Organization
-	orgIDstr := request.PathParameter("organizationID")
 	if len(orgIDstr) == 0 {
-		ctx.Logger.Warn("This shouldn't happen. An empty organization ID has been passed to DescribeOrganizationHandler")
+		logger.Warn("This shouldn't happen. An empty organization ID has been passed to DescribeOrganizationHandler")
 		response.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 	orgID, err := strconv.Atoi(orgIDstr)
+	logger = logger.WithField("OrganizationID", orgID)
 	if err != nil {
-		ctx.Logger.WithError(err).Errorf("Invalid Org ID given: %s", orgIDstr)
-		response.WriteError(http.StatusBadRequest, err)
+		logger.WithError(err).Debug("Invalid Org ID given")
+		response.WriteHeader(http.StatusBadRequest)
 		return
+	}
+	if orgID <= 0 {
+		logger.WithError(errors.New("invalid org ID")).Debug("Negative Org ID given")
+		response.WriteHeader(http.StatusBadRequest)
 	}
 
 	// TODO: get logged-in user and check their permissions
@@ -203,7 +321,7 @@ func (server *Server) DeleteOrganizationHandler(request *restful.Request, respon
 	err = organizations.DeleteOrganization(ctx, uint64(orgID))
 	if err != nil {
 		// TODO: check the err type to discern between "not found" and "there was a DB error"
-		server.Config.Logger.WithError(err).Error("Failed to fetch organization")
+		logger.WithError(err).Error("Failed to fetch organization")
 		response.WriteHeader(http.StatusInternalServerError)
 		return
 	}

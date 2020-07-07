@@ -2,7 +2,6 @@ package server
 
 import (
 	"fmt"
-	"github.com/klaital/volunteer-savvy-backend/internal/pkg/organizations"
 	"github.com/klaital/volunteer-savvy-backend/internal/pkg/sites"
 	"github.com/klaital/volunteer-savvy-backend/internal/pkg/users"
 	"net/http"
@@ -33,8 +32,13 @@ func New(config *config.ServiceConfig) (*Server, error) {
 	server.container.Filter(JsonLoggingFilter)
 	server.container.Filter(server.SetRequestIDFilter)
 
-	// set up the single api we'll use for the example
-	server.setupAPI()
+	// set up the APIs we use for this server setup
+	server.setupSupportAPI()
+
+	orgServerConfig := NewOrganizationsServer(config.GetDbConn())
+	orgServerConfig.BasePath = config.BasePath
+	orgServer := orgServerConfig.GetOrganizationsAPI()
+	server.container.Add(orgServer)
 
 	// Expose Swagger-UI
 	//http.Handle("/apidocs/", http.StripPrefix("/apidocs/", http.FileServer(http.Dir("~/bin/swagger-ui/dist"))))
@@ -128,7 +132,7 @@ func (server *Server) healthCheckHandler(request *restful.Request, response *res
 }
 
 // do this for each subpackage/service
-func (server *Server) setupAPI() {
+func (server *Server) setupSupportAPI() {
 
 	service := new(restful.WebService)
 	service.Path(server.Config.BasePath).ApiVersion("0.0.0").Doc("Volunteer-Savvy Backend")
@@ -139,67 +143,6 @@ func (server *Server) setupAPI() {
 	service.Route(
 		service.GET("/{subpath:*}").To(server.staticFileHandler))
 
-	//
-	// Organizations APIs
-	//
-	service.Route(
-		service.GET("/organizations/").
-			//Filter(filters.RateLimitingFilter).
-			To(server.ListOrganizationsHandler).
-			Doc("List Organizations").
-			Produces(restful.MIME_JSON).
-			Writes(ListOrganizationsResponse{}).
-			Returns(http.StatusOK, "Fetched all organizations", []organizations.Organization{}))
-	// TODO: CreateOrganization needs a SuperAdmin permissions check filter
-	service.Route(
-		service.POST("/organizations/").
-			//Filter(filters.RequireValidJWT).
-			//Filter(filters.RateLimitingFilter).
-			//Filter(filters.RequireSuperAdminPermission).
-			To(server.CreateOrganizationHandler).
-			Doc("Create Organization").
-			Produces(restful.MIME_JSON).
-			Consumes(restful.MIME_JSON).
-			Reads(organizations.Organization{}).
-			Writes(organizations.Organization{}).
-			Returns(http.StatusOK, "Organization created.", organizations.Organization{}))
-	service.Route(
-		service.GET("/organizations/{organizationID}").
-			//Filter(filters.RateLimitingFilter).
-			To(server.DescribeOrganizationHandler).
-			Doc("Describe Organization").
-			Param(restful.PathParameter("organizationID", "ID taken from ListOrganizations")).
-			Produces(restful.MIME_JSON).
-			Writes(organizations.Organization{}).
-			Returns(http.StatusOK, "Organization details fetched", organizations.Organization{}).
-			Returns(http.StatusNotFound, "Invalid Organization ID", nil))
-	// TODO: UpdateOrganization needs a SuperAdmin permissions check filter
-	service.Route(
-		service.PUT("/organizations/{organizationID}").
-			//Filter(filters.RequireValidJWT).
-			//Filter(filters.RateLimitingFilter).
-			//Filter(filters.RequireSuperAdminPermission).
-			To(server.UpdateOrganizationHandler).
-			Doc("Update Organization").
-			Param(restful.PathParameter("organizationId", "ID taken from ListOrganizations")).
-			Consumes(restful.MIME_JSON).
-			Produces(restful.MIME_JSON).
-			Reads(organizations.Organization{}).
-			Writes(organizations.Organization{}).
-			Returns(http.StatusOK, "Organization details updated", organizations.Organization{}).
-			Returns(http.StatusBadRequest, "Unable to set the requested values.", nil).
-			Returns(http.StatusNotFound, "Invalid Organization ID", nil))
-	// TODO: DeleteOrganizations needs a SuperAdmin permissions check filter
-	service.Route(
-		service.DELETE("/organizations/{organizationID}").
-			//Filter(filters.RequireValidJWT).
-			//Filter(filters.RateLimitingFilter).
-			//Filter(filters.RequireSuperAdminPermission).
-			To(server.DeleteOrganizationHandler).
-			Doc("Destroy Organization").
-			Param(restful.PathParameter("organizationID", "ID taken from ListOrganizations")).
-			Returns(http.StatusOK, "Organization deleted", nil).
-			Returns(http.StatusNotFound, "Invalid Organization ID", nil))
 
 	//
 	// Sites APIs
