@@ -20,5 +20,5 @@ const deleteOrganizationNullFkeysSql = `
 	UPDATE users SET organization_id=0 WHERE organization_id=:id; 
 	DELETE FROM organizations WHERE id=:id LIMIT 1
 `
-const listOrganizationsSql = `SELECT * FROM organizations`
-const describeOrganizationSql = `SELECT * FROM organizations WHERE id=?`
+const listOrganizationsSql = `SELECT id, name, slug, authcode, contact_user_id, lat, lon FROM organizations`
+const describeOrganizationSql = `SELECT id, name, slug, authcode, contact_user_id, lat, lon FROM organizations WHERE id=?`
