@@ -82,7 +82,7 @@ type SiteCoordinator struct {
 	IsPrimary bool `db:"is_primary"`
 }
 
-func DescribeSite(ctx context.Context, db *sqlx.DB, slug string) (site *Site, err error) {
+func DescribeSite(ctx context.Context, slug string, db *sqlx.DB) (site *Site, err error) {
 	logger := filters.GetContextLogger(ctx).WithFields(log.Fields{
 		"operation": "FindSite",
 		"slug": slug,

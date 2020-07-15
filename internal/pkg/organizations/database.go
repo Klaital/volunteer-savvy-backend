@@ -79,7 +79,7 @@ func (o *Organization) Update(ctx context.Context, db *sqlx.DB) error {
 	return nil
 }
 
-func DeleteOrganization(ctx context.Context, db *sqlx.DB, organizationID uint64) error {
+func DeleteOrganization(ctx context.Context, organizationID uint64, db *sqlx.DB) error {
 	logger := filters.GetContextLogger(ctx).WithFields(logrus.Fields{
 		"operation":      "DeleteOrganization",
 		"OrganizationID": organizationID,

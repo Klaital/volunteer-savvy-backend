@@ -2,6 +2,7 @@ package server
 
 import (
 	"fmt"
+	"github.com/klaital/volunteer-savvy-backend/internal/pkg/organizations"
 	"github.com/klaital/volunteer-savvy-backend/internal/pkg/sites"
 	"github.com/klaital/volunteer-savvy-backend/internal/pkg/users"
 	"net/http"
@@ -35,7 +36,7 @@ func New(config *config.ServiceConfig) (*Server, error) {
 	// set up the APIs we use for this server setup
 	server.setupSupportAPI()
 
-	orgServerConfig := NewOrganizationsServer(config.GetDbConn())
+	orgServerConfig := organizations.NewOrganizationsServer(config.GetDbConn())
 	orgServerConfig.BasePath = config.BasePath
 	orgServer := orgServerConfig.GetOrganizationsAPI()
 	server.container.Add(orgServer)
@@ -153,8 +154,8 @@ func (server *Server) setupSupportAPI() {
 			To(server.ListSitesHandler).
 			Doc("Fetch all sites").
 			Produces(restful.MIME_JSON).
-			Writes(ListSitesResponse{}).
-			Returns(http.StatusOK, "Fetched all sites", ListSitesResponse{}))
+			Writes(sites.ListSitesResponse{}).
+			Returns(http.StatusOK, "Fetched all sites", sites.ListSitesResponse{}))
 	service.Route(
 		service.POST("/sites/").
 			//Filter(filters.RequireValidJWT).

@@ -1,3 +1,4 @@
 package version
 
-var BuildVersion = "0.0.0"
+var BuildVersion = "unknown"
+var Version = "0.0.0"
