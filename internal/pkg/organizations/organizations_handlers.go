@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"errors"
 	"github.com/emicklei/go-restful"
-	"github.com/jmoiron/sqlx"
 	"github.com/klaital/volunteer-savvy-backend/internal/pkg/config"
 	"github.com/klaital/volunteer-savvy-backend/internal/pkg/filters"
 	"github.com/klaital/volunteer-savvy-backend/internal/pkg/version"
@@ -14,17 +13,14 @@ import (
 )
 
 type OrganizationsServer struct {
-	BasePath string
 	ApiVersion string
-	Db *sqlx.DB
 	Config *config.ServiceConfig
 }
 
-func NewOrganizationsServer(db *sqlx.DB) *OrganizationsServer {
+func NewOrganizationsServer(cfg *config.ServiceConfig) *OrganizationsServer {
 	return &OrganizationsServer{
-		BasePath:   "/vs",
 		ApiVersion: version.Version,
-		Db:         db,
+		Config: cfg,
 	}
 }
 
@@ -34,7 +30,7 @@ func NewOrganizationsServer(db *sqlx.DB) *OrganizationsServer {
 func (server *OrganizationsServer) GetOrganizationsAPI() *restful.WebService{
 
 	service := new(restful.WebService)
-	service.Path(server.BasePath + "/organizations").ApiVersion(server.ApiVersion).Doc("Volunteer-Savvy Backend")
+	service.Path(server.Config.BasePath + "/organizations").ApiVersion(server.ApiVersion).Doc("Volunteer-Savvy Backend")
 
 	//
 	// Organizations APIs

@@ -1,11 +1,10 @@
-package server
+package filters
 
 import (
 	"bytes"
 	"fmt"
 	"github.com/emicklei/go-restful"
-	uuid "github.com/satori/go.uuid"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"io/ioutil"
 	"strings"
 	"time"
@@ -14,6 +13,9 @@ import (
 // JsonLoggingFilter generates log lines for requests in JSON format.
 func JsonLoggingFilter(req *restful.Request, resp *restful.Response, chain *restful.FilterChain) {
 	_, originatingIP := getOriginatingIP(req)
+
+	ctx := GetRequestContext(req)
+	logger := GetContextLogger(ctx)
 
 	// W3C Trace Context Traceparent header
 	// The traceparent header represents the incoming request in a tracing system in a common format, understood by all vendors.
@@ -31,7 +33,7 @@ func JsonLoggingFilter(req *restful.Request, resp *restful.Response, chain *rest
 
 	// TODO: Would be nice to log the response body.
 
-	fields := log.Fields{
+	fields := logrus.Fields{
 		"operation":     "NCSACommonLogFormatLogger",
 		"originatingIP": originatingIP,
 		"time":          time.Now().Format("02/Jan/2006:15:04:05.000 -0700"),
@@ -58,7 +60,7 @@ func JsonLoggingFilter(req *restful.Request, resp *restful.Response, chain *rest
 		resp.ContentLength(),
 	)
 
-	logger := log.WithFields(fields)
+	logger = logger.WithFields(fields)
 
 	// Health Check requests are debug-level log lines to reduce logspam in non-test realms
 	if isHealthRequest(req) {
@@ -69,7 +71,7 @@ func JsonLoggingFilter(req *restful.Request, resp *restful.Response, chain *rest
 }
 
 func isHealthRequest(req *restful.Request) bool {
-	return strings.HasPrefix(req.Request.URL.RequestURI(), "/GetServiceStatus")
+	return strings.HasPrefix(req.Request.URL.RequestURI(), "/GetServiceStatus") || strings.HasPrefix(req.Request.URL.RequestURI(), "/healthz")
 }
 
 func getOriginatingIP(req *restful.Request) (proxyExists bool, originatingIP string) {
@@ -84,18 +86,4 @@ func getOriginatingIP(req *restful.Request) (proxyExists bool, originatingIP str
 	}
 
 	return
-}
-
-// SetRequestIDFilter generates a GUID identifying this specific HTTP request,
-// and sets it as an attribute on the request for server-side logging, and as
-// a header on the response.
-func (server *Server) SetRequestIDFilter(req *restful.Request, resp *restful.Response, chain *restful.FilterChain) {
-	// Configure this request's logger with a UUID
-	requestID := uuid.NewV4().String()
-	logger := server.Config.Logger.WithField("RequestID", requestID)
-
-	req.SetAttribute("RequestID", requestID)
-	req.SetAttribute("Logger", logger)
-	resp.AddHeader("Request-ID", requestID)
-	chain.ProcessFilter(req, resp)
 }

@@ -1,11 +1,14 @@
 package main
 
 import (
+	"github.com/emicklei/go-restful"
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/klaital/volunteer-savvy-backend/internal/pkg/config"
+	"github.com/klaital/volunteer-savvy-backend/internal/pkg/organizations"
 	"github.com/klaital/volunteer-savvy-backend/internal/pkg/server"
+	"github.com/klaital/volunteer-savvy-backend/internal/pkg/sites"
 	_ "github.com/lib/pq"
 	log "github.com/sirupsen/logrus"
 	"time"
@@ -54,9 +57,16 @@ func main() {
 	}
 
 	// Initialize the server
-	s, err := server.New(cfg)
+	orgServer := organizations.NewOrganizationsServer(cfg)
+	sitesServer := sites.NewSitesServer(cfg)
+
+	services := []*restful.WebService{
+		orgServer.GetOrganizationsAPI(),
+		sitesServer.GetSitesAPI(),
+	}
+	s, err := server.New(cfg, services)
 	if err != nil {
-		logger.Fatalf("Failed to create server struct: %v", err)
+		logger.WithError(err).Fatal("Failed to create server struct")
 	}
 	// Actually start the application
 	s.Serve()

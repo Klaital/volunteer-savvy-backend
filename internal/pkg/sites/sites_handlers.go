@@ -6,11 +6,134 @@ import (
 	"github.com/emicklei/go-restful"
 	"github.com/klaital/volunteer-savvy-backend/internal/pkg/config"
 	"github.com/klaital/volunteer-savvy-backend/internal/pkg/filters"
+	"github.com/klaital/volunteer-savvy-backend/internal/pkg/version"
 	"net/http"
 )
 
 type SitesServer struct {
+	ApiVersion string
 	Config *config.ServiceConfig
+}
+
+func NewSitesServer(cfg *config.ServiceConfig) *SitesServer {
+	return &SitesServer{
+		ApiVersion: version.Version,
+		Config: cfg,
+	}
+}
+
+func (server *SitesServer) GetSitesAPI() *restful.WebService {
+	service := new(restful.WebService)
+	service.Path(server.Config.BasePath + "/sites").ApiVersion(server.ApiVersion)
+
+	//
+	// Sites APIs
+	//
+	service.Route(
+		service.GET("/sites/").
+			//Filter(filters.RateLimitingFilter).
+			To(server.ListSitesHandler).
+			Doc("Fetch all sites").
+			Produces(restful.MIME_JSON).
+			Writes(ListSitesResponse{}).
+			Returns(http.StatusOK, "Fetched all sites", ListSitesResponse{}))
+	service.Route(
+		service.POST("/sites/").
+			//Filter(filters.RequireValidJWT).
+			//Filter(filters.RateLimitingFilter).
+			//Filter(filters.RequireAdminPermission).
+			To(server.CreateSiteHandler).
+			Doc("Fetch all sites").
+			Produces(restful.MIME_JSON).
+			Consumes(restful.MIME_JSON).
+			Reads(Site{}).
+			Returns(http.StatusOK, "Created site", nil).
+			Returns(http.StatusUnauthorized, "Not logged in", nil).
+			Returns(http.StatusForbidden, "Logged-in user is not authorized to create sites", nil))
+	service.Route(
+		service.GET("/sites/{siteSlug}").
+			//Filter(filters.RequireValidJWT).
+			//Filter(filters.RateLimitingFilter).
+			To(server.DescribeSiteHandler).
+			Doc("Fetch all sites").
+			Produces(restful.MIME_JSON).
+			Writes(Site{}).
+			Returns(http.StatusOK, "Fetched site data", Site{}))
+	service.Route(
+		service.PUT("/sites/{siteSlug}").
+			//Filter(filters.RequireValidJWT).
+			//Filter(filters.RateLimitingFilter).
+			//Filter(filters.RequireSiteUpdatePermission).
+			To(server.UpdateSiteHandler).
+			Doc("Update site config").
+			Produces(restful.MIME_JSON).
+			Consumes(restful.MIME_JSON).
+			Reads(UpdateSiteRequestAdmin{}).
+			Writes(Site{}).
+			Returns(http.StatusOK, "Site updated", Site{}).
+			Returns(http.StatusUnauthorized, "Not logged in", nil).
+			Returns(http.StatusForbidden, "Logged-in user is not authorized to update this site", nil))
+	service.Route(
+		service.DELETE("/sites/{siteSlug}").
+			//Filter(filters.RequireValidJWT).
+			//Filter(filters.RateLimitingFilter).
+			//Filter(filters.RequireAdminPermission).
+			To(server.DeleteSiteHandler).
+			Doc("Delete site and related calendars").
+			Produces(restful.MIME_JSON).
+			Returns(http.StatusOK, "Site deleted", nil).
+			Returns(http.StatusUnauthorized, "Not logged in", nil).
+			Returns(http.StatusForbidden, "Logged-in user is not authorized to update this site", nil))
+	//service.Route(
+	//	service.PUT("/sites/{siteSlug}/feature/{featureId}").
+	//		//Filter(filters.RequireValidJWT).
+	//		//Filter(filters.RateLimitingFilter).
+	//		//Filter(filters.RequireSiteUpdatePermission).
+	//		To(AddSiteFeatureHandler).
+	//		Doc("Add a Feature to a Site").
+	//		Produces(restful.MIME_JSON).
+	//		Reads(AddSiteFeatureRequest{}).
+	//		Writes(sites.Site{}).
+	//		Returns(http.StatusOK, "Site updated", sites.Site{}).
+	//		Returns(http.StatusUnauthorized, "Not logged in", nil).
+	//		Returns(http.StatusForbidden, "Logged-in user is not authorized to update this site", nil))
+	//service.Route(
+	//	service.DELETE("/sites/{siteSlug}/feature/{featureId}").
+	//		//Filter(filters.RequireValidJWT).
+	//		//Filter(filters.RateLimitingFilter).
+	//		//Filter(filters.RequireSiteUpdatePermission).
+	//		To(DeleteSiteFeatureHandler).
+	//		Doc("Remove a Feature from a Site").
+	//		Produces(restful.MIME_JSON).
+	//		Returns(http.StatusOK, "Site feature removed", nil).
+	//		Returns(http.StatusUnauthorized, "Not logged in", nil).
+	//		Returns(http.StatusForbidden, "Logged-in user is not authorized to update this site", nil))
+	//service.Route(
+	//	service.PUT("/sites/{siteSlug}/coordinators/{userId}").
+	//		//Filter(filters.RequireValidJWT).
+	//		//Filter(filters.RateLimitingFilter).
+	//		//Filter(filters.RequireSiteUpdatePermission).
+	//		To(AddSiteCoordinatorHandler).
+	//		Doc("Add a Coordinator to a Site").
+	//		Produces(restful.MIME_JSON).
+	//		Writes(sites.Site{}).
+	//		Returns(http.StatusOK, "Site updated", sites.Site{}).
+	//		Returns(http.StatusUnauthorized, "Not logged in", nil).
+	//		Returns(http.StatusForbidden, "Logged-in user is not authorized to update this site", nil))
+	//service.Route(
+	//	service.DELETE("/sites/{siteSlug}/feature/{featureId}").
+	//		//Filter(filters.RequireValidJWT).
+	//		//Filter(filters.RateLimitingFilter).
+	//		//Filter(filters.RequireSiteUpdatePermission).
+	//		To(DeleteSiteFeatureHandler).
+	//		Doc("Remove a Coordinator from a Site").
+	//		Produces(restful.MIME_JSON).
+	//		Returns(http.StatusOK, "Site coordinator removed", sites.Site{}).
+	//		Returns(http.StatusUnauthorized, "Not logged in", nil).
+	//		Returns(http.StatusForbidden, "Logged-in user is not authorized to update this site", nil))
+	//
+
+	return service
 }
 
 type ListSitesResponse struct {
