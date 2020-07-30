@@ -41,7 +41,7 @@ func GetRequestContext(req *restful.Request) context.Context {
 		requestID = uuid.NewV4().String()
 	}
 
-	ctx := context.WithValue(context.Background(), "request-id", requestID)
+	ctx := context.WithValue(req.Request.Context(), "request-id", requestID)
 	logger := GetContextLogger(ctx)
 	// cache the preconfigured logger on the context
 	ctx = context.WithValue(ctx, "logger", logger)
