@@ -1,11 +1,13 @@
-package sites
+package server
 
 import (
 	"database/sql"
 	"errors"
 	"github.com/emicklei/go-restful"
+	"github.com/klaital/volunteer-savvy-backend/internal/pkg/auth"
 	"github.com/klaital/volunteer-savvy-backend/internal/pkg/config"
 	"github.com/klaital/volunteer-savvy-backend/internal/pkg/filters"
+	"github.com/klaital/volunteer-savvy-backend/internal/pkg/sites"
 	"github.com/klaital/volunteer-savvy-backend/internal/pkg/version"
 	"net/http"
 )
@@ -15,7 +17,7 @@ type SitesServer struct {
 	Config *config.ServiceConfig
 }
 
-func NewSitesServer(cfg *config.ServiceConfig) *SitesServer {
+func New(cfg *config.ServiceConfig) *SitesServer {
 	return &SitesServer{
 		ApiVersion: version.Version,
 		Config: cfg,
@@ -39,43 +41,44 @@ func (server *SitesServer) GetSitesAPI() *restful.WebService {
 			Returns(http.StatusOK, "Fetched all sites", ListSitesResponse{}))
 	service.Route(
 		service.POST("/sites/").
-			//Filter(filters.RequireValidJWT).
+			Filter(auth.ValidJwtFilter).
 			//Filter(filters.RateLimitingFilter).
+			// TODO: how do I write a filter that can inspect the Site object for the Organization ID, then validate that that user has permissions on that org+site?
 			//Filter(filters.RequireAdminPermission).
 			To(server.CreateSiteHandler).
 			Doc("Fetch all sites").
 			Produces(restful.MIME_JSON).
 			Consumes(restful.MIME_JSON).
-			Reads(Site{}).
+			Reads(sites.Site{}).
 			Returns(http.StatusOK, "Created site", nil).
 			Returns(http.StatusUnauthorized, "Not logged in", nil).
 			Returns(http.StatusForbidden, "Logged-in user is not authorized to create sites", nil))
 	service.Route(
 		service.GET("/sites/{siteSlug}").
-			//Filter(filters.RequireValidJWT).
+			Filter(auth.ValidJwtFilter).
 			//Filter(filters.RateLimitingFilter).
 			To(server.DescribeSiteHandler).
 			Doc("Fetch all sites").
 			Produces(restful.MIME_JSON).
-			Writes(Site{}).
-			Returns(http.StatusOK, "Fetched site data", Site{}))
+			Writes(sites.Site{}).
+			Returns(http.StatusOK, "Fetched site data", sites.Site{}))
 	service.Route(
 		service.PUT("/sites/{siteSlug}").
-			//Filter(filters.RequireValidJWT).
+			Filter(auth.ValidJwtFilter).
 			//Filter(filters.RateLimitingFilter).
 			//Filter(filters.RequireSiteUpdatePermission).
 			To(server.UpdateSiteHandler).
 			Doc("Update site config").
 			Produces(restful.MIME_JSON).
 			Consumes(restful.MIME_JSON).
-			Reads(UpdateSiteRequestAdmin{}).
-			Writes(Site{}).
-			Returns(http.StatusOK, "Site updated", Site{}).
+			Reads(sites.UpdateSiteRequestAdmin{}).
+			Writes(sites.Site{}).
+			Returns(http.StatusOK, "Site updated", sites.Site{}).
 			Returns(http.StatusUnauthorized, "Not logged in", nil).
 			Returns(http.StatusForbidden, "Logged-in user is not authorized to update this site", nil))
 	service.Route(
 		service.DELETE("/sites/{siteSlug}").
-			//Filter(filters.RequireValidJWT).
+			Filter(auth.ValidJwtFilter).
 			//Filter(filters.RateLimitingFilter).
 			//Filter(filters.RequireAdminPermission).
 			To(server.DeleteSiteHandler).
@@ -86,7 +89,7 @@ func (server *SitesServer) GetSitesAPI() *restful.WebService {
 			Returns(http.StatusForbidden, "Logged-in user is not authorized to update this site", nil))
 	//service.Route(
 	//	service.PUT("/sites/{siteSlug}/feature/{featureId}").
-	//		//Filter(filters.RequireValidJWT).
+	//		Filter(filters.ValidJwtFilter).
 	//		//Filter(filters.RateLimitingFilter).
 	//		//Filter(filters.RequireSiteUpdatePermission).
 	//		To(AddSiteFeatureHandler).
@@ -99,7 +102,7 @@ func (server *SitesServer) GetSitesAPI() *restful.WebService {
 	//		Returns(http.StatusForbidden, "Logged-in user is not authorized to update this site", nil))
 	//service.Route(
 	//	service.DELETE("/sites/{siteSlug}/feature/{featureId}").
-	//		//Filter(filters.RequireValidJWT).
+	//		Filter(filters.ValidJwtFilter).
 	//		//Filter(filters.RateLimitingFilter).
 	//		//Filter(filters.RequireSiteUpdatePermission).
 	//		To(DeleteSiteFeatureHandler).
@@ -110,7 +113,7 @@ func (server *SitesServer) GetSitesAPI() *restful.WebService {
 	//		Returns(http.StatusForbidden, "Logged-in user is not authorized to update this site", nil))
 	//service.Route(
 	//	service.PUT("/sites/{siteSlug}/coordinators/{userId}").
-	//		//Filter(filters.RequireValidJWT).
+	//		Filter(filters.ValidJwtFilter).
 	//		//Filter(filters.RateLimitingFilter).
 	//		//Filter(filters.RequireSiteUpdatePermission).
 	//		To(AddSiteCoordinatorHandler).
@@ -122,7 +125,7 @@ func (server *SitesServer) GetSitesAPI() *restful.WebService {
 	//		Returns(http.StatusForbidden, "Logged-in user is not authorized to update this site", nil))
 	//service.Route(
 	//	service.DELETE("/sites/{siteSlug}/feature/{featureId}").
-	//		//Filter(filters.RequireValidJWT).
+	//		Filter(filters.ValidJwtFilter).
 	//		//Filter(filters.RateLimitingFilter).
 	//		//Filter(filters.RequireSiteUpdatePermission).
 	//		To(DeleteSiteFeatureHandler).
@@ -137,7 +140,7 @@ func (server *SitesServer) GetSitesAPI() *restful.WebService {
 }
 
 type ListSitesResponse struct {
-	Sites []Site `json:"sites"`
+	Sites []sites.Site `json:"sites"`
 }
 func (server *SitesServer) ListSitesHandler(request *restful.Request, response *restful.Response) {
 	ctx := filters.GetRequestContext(request)
@@ -146,7 +149,7 @@ func (server *SitesServer) ListSitesHandler(request *restful.Request, response *
 	// Fetch sites list.
 	// TODO: add optional search filters
 	// TODO: add filter for only showing sites for the org that the user is logged-in to
-	siteSet, err := ListSites(ctx, server.Config.GetDbConn())
+	siteSet, err := sites.ListSites(ctx, server.Config.GetDbConn())
 	if err != nil {
 		// TODO: inspect err type to discern between "DB error" and "no results found"
 		logger.WithError(err).Error("Failed to fetch sites list")
@@ -168,7 +171,7 @@ func (server *SitesServer) CreateSiteHandler(request *restful.Request, response 
 	logger := filters.GetContextLogger(ctx)
 
 	// Deserialize the request body
-	requestSite := Site{}
+	requestSite := sites.Site{}
 	err := request.ReadEntity(&requestSite)
 	if err != nil {
 		logger.WithError(err).Error("Unable to deserialize the request body")
@@ -203,7 +206,7 @@ func (server *SitesServer) DescribeSiteHandler(request *restful.Request, respons
 
 	// Read input - the requested site slug
 	requestedSiteSlug := request.PathParameter("siteSlug")
-	s, err := DescribeSite(ctx, requestedSiteSlug, server.Config.GetDbConn())
+	s, err := sites.DescribeSite(ctx, requestedSiteSlug, server.Config.GetDbConn())
 	if err != nil {
 		logger.WithError(err).Error("Failed to fetch site data")
 		response.WriteHeader(http.StatusInternalServerError)
@@ -232,7 +235,7 @@ func (server *SitesServer) UpdateSiteHandler(request *restful.Request, response 
 	}
 
 	// Deserialize the request body
-	requestSite := Site{}
+	requestSite := sites.Site{}
 	err := request.ReadEntity(&requestSite)
 	if err != nil {
 		logger.WithError(err).Error("Unable to deserialize the request body")
@@ -247,7 +250,7 @@ func (server *SitesServer) UpdateSiteHandler(request *restful.Request, response 
 	// TODO: Check the logged-in user's permissions for this site to determine what fields to save.
 
 	// Save it
-	updateRequest := UpdateSiteRequestAdmin{Site: requestSite}
+	updateRequest := sites.UpdateSiteRequestAdmin{Site: requestSite}
 	err = requestSite.UpdateSiteAdmin(ctx, server.Config.GetDbConn(), &updateRequest)
 	if err != nil {
 		logger.WithError(err).Error("Failed to save site")
@@ -274,7 +277,7 @@ func (server *SitesServer) DeleteSiteHandler(request *restful.Request, response 
 
 	// Read input - the requested site slug
 	requestedSiteSlug := request.PathParameter("siteSlug")
-	err := DeleteSite(ctx, server.Config.GetDbConn(), requestedSiteSlug)
+	err := sites.DeleteSite(ctx, server.Config.GetDbConn(), requestedSiteSlug)
 
 	if err != nil {
 		// TODO: check the error type to discern between "slug not found" and "db error"

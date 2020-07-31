@@ -5,10 +5,12 @@ import (
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
+	aServer "github.com/klaital/volunteer-savvy-backend/internal/pkg/auth/server"
 	"github.com/klaital/volunteer-savvy-backend/internal/pkg/config"
-	"github.com/klaital/volunteer-savvy-backend/internal/pkg/organizations"
+	oServer "github.com/klaital/volunteer-savvy-backend/internal/pkg/organizations/server"
 	"github.com/klaital/volunteer-savvy-backend/internal/pkg/server"
-	"github.com/klaital/volunteer-savvy-backend/internal/pkg/sites"
+	sServer "github.com/klaital/volunteer-savvy-backend/internal/pkg/sites/server"
+	uServer "github.com/klaital/volunteer-savvy-backend/internal/pkg/users/server"
 	_ "github.com/lib/pq"
 	log "github.com/sirupsen/logrus"
 	"time"
@@ -57,12 +59,16 @@ func main() {
 	}
 
 	// Initialize the server
-	orgServer := organizations.NewOrganizationsServer(cfg)
-	sitesServer := sites.NewSitesServer(cfg)
+	orgServer := oServer.New(cfg)
+	sitesServer := sServer.New(cfg)
+	authServer := aServer.New(cfg)
+	usersServer := uServer.New(cfg)
 
 	services := []*restful.WebService{
 		orgServer.GetOrganizationsAPI(),
 		sitesServer.GetSitesAPI(),
+		authServer.GetAuthAPI(),
+		usersServer.GetUsersAPI(),
 	}
 	s, err := server.New(cfg, services)
 	if err != nil {

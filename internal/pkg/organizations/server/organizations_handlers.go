@@ -1,11 +1,13 @@
-package organizations
+package server
 
 import (
 	"database/sql"
 	"errors"
 	"github.com/emicklei/go-restful"
+	"github.com/klaital/volunteer-savvy-backend/internal/pkg/auth"
 	"github.com/klaital/volunteer-savvy-backend/internal/pkg/config"
 	"github.com/klaital/volunteer-savvy-backend/internal/pkg/filters"
+	"github.com/klaital/volunteer-savvy-backend/internal/pkg/organizations"
 	"github.com/klaital/volunteer-savvy-backend/internal/pkg/version"
 	"github.com/sirupsen/logrus"
 	"net/http"
@@ -17,7 +19,7 @@ type OrganizationsServer struct {
 	Config *config.ServiceConfig
 }
 
-func NewOrganizationsServer(cfg *config.ServiceConfig) *OrganizationsServer {
+func New(cfg *config.ServiceConfig) *OrganizationsServer {
 	return &OrganizationsServer{
 		ApiVersion: version.Version,
 		Config: cfg,
@@ -42,20 +44,20 @@ func (server *OrganizationsServer) GetOrganizationsAPI() *restful.WebService{
 			Doc("List Organizations").
 			Produces(restful.MIME_JSON).
 			Writes(ListOrganizationsResponse{}).
-			Returns(http.StatusOK, "Fetched all organizations", []Organization{}))
+			Returns(http.StatusOK, "Fetched all organizations", []organizations.Organization{}))
 	// TODO: CreateOrganization needs a SuperAdmin permissions check filter
 	service.Route(
 		service.POST("/").
-			//Filter(filters.RequireValidJWT).
+			Filter(auth.ValidJwtFilter).
 			//Filter(filters.RateLimitingFilter).
 			//Filter(filters.RequireSuperAdminPermission).
 			To(server.CreateOrganizationHandler).
 			Doc("Create Organization").
 			Produces(restful.MIME_JSON).
 			Consumes(restful.MIME_JSON).
-			Reads(Organization{}).
-			Writes(Organization{}).
-			Returns(http.StatusOK, "Organization created.", Organization{}))
+			Reads(organizations.Organization{}).
+			Writes(organizations.Organization{}).
+			Returns(http.StatusOK, "Organization created.", organizations.Organization{}))
 	service.Route(
 		service.GET("/{organizationID}").
 			//Filter(filters.RateLimitingFilter).
@@ -63,13 +65,13 @@ func (server *OrganizationsServer) GetOrganizationsAPI() *restful.WebService{
 			Doc("Describe Organization").
 			Param(restful.PathParameter("organizationID", "ID taken from ListOrganizations")).
 			Produces(restful.MIME_JSON).
-			Writes(Organization{}).
-			Returns(http.StatusOK, "Organization details fetched", Organization{}).
+			Writes(organizations.Organization{}).
+			Returns(http.StatusOK, "Organization details fetched", organizations.Organization{}).
 			Returns(http.StatusNotFound, "Invalid Organization ID", nil))
 	// TODO: UpdateOrganization needs a SuperAdmin permissions check filter
 	service.Route(
 		service.PUT("/{organizationID}").
-			//Filter(filters.RequireValidJWT).
+			Filter(auth.ValidJwtFilter).
 			//Filter(filters.RateLimitingFilter).
 			//Filter(filters.RequireSuperAdminPermission).
 			To(server.UpdateOrganizationHandler).
@@ -77,15 +79,15 @@ func (server *OrganizationsServer) GetOrganizationsAPI() *restful.WebService{
 			Param(restful.PathParameter("organizationId", "ID taken from ListOrganizations")).
 			Consumes(restful.MIME_JSON).
 			Produces(restful.MIME_JSON).
-			Reads(Organization{}).
-			Writes(Organization{}).
-			Returns(http.StatusOK, "Organization details updated", Organization{}).
+			Reads(organizations.Organization{}).
+			Writes(organizations.Organization{}).
+			Returns(http.StatusOK, "Organization details updated", organizations.Organization{}).
 			Returns(http.StatusBadRequest, "Unable to set the requested values.", nil).
 			Returns(http.StatusNotFound, "Invalid Organization ID", nil))
 	// TODO: DeleteOrganizations needs a SuperAdmin permissions check filter
 	service.Route(
 		service.DELETE("/{organizationID}").
-			//Filter(filters.RequireValidJWT).
+			Filter(auth.ValidJwtFilter).
 			//Filter(filters.RateLimitingFilter).
 			//Filter(filters.RequireSuperAdminPermission).
 			To(server.DeleteOrganizationHandler).
@@ -97,7 +99,7 @@ func (server *OrganizationsServer) GetOrganizationsAPI() *restful.WebService{
 	return service
 }
 type ListOrganizationsResponse struct {
-	Organizations []Organization `json:"organizations"`
+	Organizations []organizations.Organization `json:"organizations"`
 }
 func (server *OrganizationsServer) ListOrganizationsHandler(request *restful.Request, response *restful.Response) {
 	// Set up the context for this request thread
@@ -107,7 +109,7 @@ func (server *OrganizationsServer) ListOrganizationsHandler(request *restful.Req
 	})
 
 	// TODO: get logged-in user and add it to the context so that permissions and scope can be determined.
-	orgs, err := ListOrganizations(ctx, server.Config.GetDbConn())
+	orgs, err := organizations.ListOrganizations(ctx, server.Config.GetDbConn())
 
 	if err != nil {
 		logger.WithError(err).Error("Failed to fetch organizations list")
@@ -159,7 +161,7 @@ func (server *OrganizationsServer) DescribeOrganizationHandler(request *restful.
 	// TODO: get logged-in user and add it to the context so that permissions and scope can be determined.
 
 	// Fetch the organization data
-	org, err := DescribeOrganization(ctx, server.Config.GetDbConn(), int64(orgID))
+	org, err := organizations.DescribeOrganization(ctx, server.Config.GetDbConn(), int64(orgID))
 	if err != nil {
 		if err == sql.ErrNoRows {
 			response.WriteHeader(http.StatusNotFound)
@@ -185,7 +187,7 @@ func (server *OrganizationsServer) CreateOrganizationHandler(request *restful.Re
 		"operation": "CreateOrganizationHandler",
 	})
 
-	newOrg := New()
+	newOrg := organizations.New()
 	err := request.ReadEntity(newOrg)
 	if err != nil {
 		// TODO: maybe do input validation in a filter function?
@@ -250,7 +252,7 @@ func (server *OrganizationsServer) UpdateOrganizationHandler(request *restful.Re
 		return
 	}
 
-	newOrg := New()
+	newOrg := organizations.New()
 	err := request.ReadEntity(newOrg)
 	if err != nil {
 		// TODO: maybe do input validation in a filter function?
@@ -315,7 +317,7 @@ func (server *OrganizationsServer)  DeleteOrganizationHandler(request *restful.R
 	// TODO: get logged-in user and check their permissions
 
 	// Fetch the organization data
-	err = DeleteOrganization(ctx, uint64(orgID), server.Config.GetDbConn())
+	err = organizations.DeleteOrganization(ctx, uint64(orgID), server.Config.GetDbConn())
 	if err != nil {
 		if err == sql.ErrNoRows {
 			response.WriteHeader(http.StatusNotFound)

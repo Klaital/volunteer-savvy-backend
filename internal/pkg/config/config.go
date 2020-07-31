@@ -5,6 +5,7 @@ import (
 	"github.com/caarlos0/env"
 	"github.com/jmoiron/sqlx"
 	"github.com/sirupsen/logrus"
+	"time"
 )
 
 type ServiceConfig struct {
@@ -12,19 +13,19 @@ type ServiceConfig struct {
 
 	ServiceVersion string `env:"SERIVCE_VERSION" envDefault:"0.0.0"`
 
-	DatabaseHost     string `env:"DB_HOST"`
-	DatabaseDriver   string `env:"DB_DRIVER"`
-	DatabaseUser     string `env:"DB_USER"`
-	DatabasePassword string `env:"PGPASSWORD"`
-	DatabasePort     int64  `env:"DB_PORT"`
-	DatabaseName     string `env:"DB_NAME"` // the actual database name to connect to
-	databaseDSN      string // to be constructed after parsing the env variables
+	DatabaseHost       string   `env:"DB_HOST"`
+	DatabaseDriver     string   `env:"DB_DRIVER"`
+	DatabaseUser       string   `env:"DB_USER"`
+	DatabasePassword   string   `env:"PGPASSWORD"`
+	DatabasePort       int64    `env:"DB_PORT"`
+	DatabaseName       string   `env:"DB_NAME"` // the actual database name to connect to
+	databaseDSN        string   // to be constructed after parsing the env variables
 	databaseConnection *sqlx.DB // to be set at runtime after main connects to the database
 
-	LogLevel         string   `env:"LOG_LEVEL" envDefault:"debug"`
-	LogStyle         string `env:"LOG_STYLE" envDefault:"prettyjson"`
+	LogLevel string `env:"LOG_LEVEL" envDefault:"debug"`
+	LogStyle string `env:"LOG_STYLE" envDefault:"prettyjson"`
 
-	Port             int64  `env:"PORT" envDefault:"8080"`
+	Port int64 `env:"PORT" envDefault:"8080"`
 
 	// Configure the static fileserver
 	StaticContentPath string `env:"STATIC_CONTENT_PATH"`
@@ -39,10 +40,27 @@ type ServiceConfig struct {
 
 	// Singleton logrus instance
 	Logger *logrus.Entry
+
+	// Oauth
+	BcryptCost              int    `env:"BCRYPT_COST" envDefault:"5"`
+	TokenExpirationTime string    `env:"JWT_EXPIRATION_DURATION" envDefault:"4h"`
+	JwtPrivateKey           string `env:"OAUTH_JWT_PRIVATE_KEY"`
+	JwtPublicKey            string `env:"OAUTH_JWT_PUBLIC_KEY"`
+}
+
+// GetTokenExpirationDuration converts the JWT_EXPIRATION_DURATION environment
+// variable to a time.Duration, substituting a safe default if the env var is
+// malformed or missing.
+func (cfg *ServiceConfig) GetTokenExpirationDuration() time.Duration {
+	d, err := time.ParseDuration(cfg.TokenExpirationTime)
+	if err == nil {
+		// Default to 1 hour for JWT expiration
+		return 1 * time.Hour
+	}
+	return d
 }
 
 var serviceConfig *ServiceConfig
-
 
 func GetServiceConfig() (config *ServiceConfig, err error) {
 	if serviceConfig != nil {

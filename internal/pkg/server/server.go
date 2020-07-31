@@ -6,7 +6,6 @@ import (
 	restfulspec "github.com/emicklei/go-restful-openapi"
 	"github.com/klaital/volunteer-savvy-backend/internal/pkg/config"
 	"github.com/klaital/volunteer-savvy-backend/internal/pkg/filters"
-	"github.com/klaital/volunteer-savvy-backend/internal/pkg/users"
 	log "github.com/sirupsen/logrus"
 	"net/http"
 	"path"
@@ -138,52 +137,6 @@ func (server *Server) setupSupportAPI() {
 	//
 	service.Route(
 		service.GET("/{subpath:*}").To(server.staticFileHandler))
-
-
-	service.Route(
-		service.GET("/users/").
-			//Filter(filters.RequireValidJWT).
-			//Filter(filters.RateLimitingFilter).
-			To(users.ListUsersHandler).
-			Doc("Fetch all users' details").
-			Produces(restful.MIME_JSON).
-			Writes([]users.User{}).
-			Returns(http.StatusOK, "Got list of users", []users.User{}))
-	//service.Route(
-	//	service.GET("/users/{userGuid}").
-	//		//Filter(filters.RequireValidJWT).
-	//		To(FindUserHandler).
-	//		Doc("Fetch details on a specific user").
-	//		Produces(restful.MIME_JSON).
-	//		Writes(users.User{}).
-	//		Returns(http.StatusOK, "User data fetched", users.User{}))
-	//service.Route(
-	//	service.POST("/users/").
-	//		//Filter(filters.RequireValidJWT).
-	//		//Filter(filters.RateLimitingFilter).
-	//		//Filter(filters.RequireAdminPermission).
-	//		To(CreateUserHandler).
-	//		Doc("Create a new user account").
-	//		Produces(restful.MIME_JSON).
-	//		Consumes(restful.MIME_JSON).
-	//		Reads(CreateUserRequest{}).
-	//		Writes(users.User{}).
-	//		Returns(http.StatusOK, "User created", users.User{}).
-	//		Returns(http.StatusUnauthorized, "Not logged in", nil).
-	//		Returns(http.StatusForbidden, "Logged-in user is not authorized to create new users", nil))
-	//service.Route(
-	//	service.PUT("/users/{userGuid}").
-	//		//Filter(filters.RequireValidJWT).
-	//		//Filter(filters.RateLimitingFilter).
-	//		//Filter(filters.RequireSOAPermission).
-	//		To(UpdateUserHandler).
-	//		Doc("Update a user's details").
-	//		Produces(restful.MIME_JSON).
-	//		Reads(UpdateUserRequest{}).
-	//		Writes(users.User{}).
-	//		Returns(http.StatusOK, "User updated", users.User{}).
-	//		Returns(http.StatusUnauthorized, "Not logged in", nil).
-	//		Returns(http.StatusForbidden, "Logged-in user is not authorized to update this user", nil))
 
 	server.container.Add(service)
 }
