@@ -42,10 +42,10 @@ type ServiceConfig struct {
 	Logger *logrus.Entry
 
 	// Oauth
-	BcryptCost              int    `env:"BCRYPT_COST" envDefault:"5"`
-	TokenExpirationTime string    `env:"JWT_EXPIRATION_DURATION" envDefault:"4h"`
-	JwtPrivateKey           string `env:"OAUTH_JWT_PRIVATE_KEY"`
-	JwtPublicKey            string `env:"OAUTH_JWT_PUBLIC_KEY"`
+	BcryptCost          int    `env:"BCRYPT_COST" envDefault:"5"`
+	TokenExpirationTime string `env:"JWT_EXPIRATION_DURATION" envDefault:"4h"`
+	JwtPrivateKey       string `env:"OAUTH_JWT_PRIVATE_KEY"`
+	JwtPublicKey        string `env:"OAUTH_JWT_PUBLIC_KEY"`
 }
 
 // GetTokenExpirationDuration converts the JWT_EXPIRATION_DURATION environment
@@ -119,7 +119,7 @@ func (cfg *ServiceConfig) GetDbConn() *sqlx.DB {
 	if cfg.databaseConnection == nil {
 		dbConn, err := sqlx.Connect(cfg.DatabaseDriver, cfg.databaseDSN)
 		if err != nil {
-			cfg.Logger.WithError(err).Error("Failed to connect to database")
+			cfg.Logger.WithField("driver", cfg.DatabaseDriver).WithError(err).Error("Failed to connect to database")
 			return nil
 		}
 		cfg.databaseConnection = dbConn
