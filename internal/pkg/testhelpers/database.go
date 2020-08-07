@@ -1,8 +1,10 @@
 package testhelpers
 
 import (
+	"fmt"
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/jmoiron/sqlx"
 	"io/ioutil"
 	"path/filepath"
@@ -45,9 +47,9 @@ func DropAllTables(db *sqlx.DB) error {
 		return err
 	}
 
-	sqlStmt = db.Rebind(`DROP TABLE IF EXISTS ? CASCADE`)
 	for _, tableName := range tables {
-		_, err = db.Exec(sqlStmt, tableName)
+		sqlStmt := fmt.Sprintf("DROP TABLE IF EXISTS %s CASCADE", tableName)
+		_, err = db.Exec(sqlStmt)
 		if err != nil {
 			return err
 		}
@@ -68,9 +70,9 @@ func ResetFixtures(db *sqlx.DB, fixturesDir string) error {
 	}
 
 	// Truncate each of them
-	sqlStmt = db.Rebind(`TRUNCATE ? CASCADE`)
 	for _, tableName := range tables {
-		_, err = db.Exec(sqlStmt, tableName)
+		sqlStmt := fmt.Sprintf("TRUNCATE %s RESTART IDENTITY CASCADE", tableName)
+		_, err = db.Exec(sqlStmt)
 		if err != nil {
 			return err
 		}
@@ -97,6 +99,6 @@ func InitializeDatabase(db *sqlx.DB, migrationsDir, fixturesDir string) error {
 	if err != nil && err != migrate.ErrNoChange {
 		return err
 	}
-	err = LoadFixtures(db, fixturesDir)
+	err = ResetFixtures(db, fixturesDir)
 	return err
 }

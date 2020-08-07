@@ -19,7 +19,6 @@ type ServiceConfig struct {
 	DatabasePassword   string   `env:"PGPASSWORD"`
 	DatabasePort       int64    `env:"DB_PORT"`
 	DatabaseName       string   `env:"DB_NAME"` // the actual database name to connect to
-	databaseDSN        string   // to be constructed after parsing the env variables
 	databaseConnection *sqlx.DB // to be set at runtime after main connects to the database
 
 	LogLevel string `env:"LOG_LEVEL" envDefault:"debug"`
@@ -62,6 +61,15 @@ func (cfg *ServiceConfig) GetTokenExpirationDuration() time.Duration {
 
 var serviceConfig *ServiceConfig
 
+func (cfg *ServiceConfig) getDatabaseDsn() string {
+	//return fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable",
+	//	cfg.DatabaseHost,
+	//	cfg.DatabasePort,
+	//	cfg.DatabaseUser,
+	//	cfg.DatabasePassword,
+	//	cfg.DatabaseName)
+	return fmt.Sprintf("%s://%s:%s@%s:%d/%s?sslmode=disable", cfg.DatabaseDriver, cfg.DatabaseUser, cfg.DatabasePassword, cfg.DatabaseHost, cfg.DatabasePort, cfg.DatabaseName)
+}
 func GetServiceConfig() (config *ServiceConfig, err error) {
 	if serviceConfig != nil {
 		return serviceConfig, nil
@@ -72,9 +80,6 @@ func GetServiceConfig() (config *ServiceConfig, err error) {
 	if err != nil {
 		return nil, err
 	}
-
-	// manually construct the DSN
-	config.databaseDSN = fmt.Sprintf("%s://%s:%s@%s:%d/%s?sslmode=disable", config.DatabaseDriver, config.DatabaseUser, config.DatabasePassword, config.DatabaseHost, config.DatabasePort, config.DatabaseName)
 
 	// instantiate the logger with some default fields
 	logger := logrus.New()
@@ -117,7 +122,8 @@ func GetServiceConfig() (config *ServiceConfig, err error) {
 func (cfg *ServiceConfig) GetDbConn() *sqlx.DB {
 	// Construct the singleton db connection pool if needed
 	if cfg.databaseConnection == nil {
-		dbConn, err := sqlx.Connect(cfg.DatabaseDriver, cfg.databaseDSN)
+		fmt.Printf("Connecting to %s db: %s\n", cfg.DatabaseDriver, cfg.getDatabaseDsn())
+		dbConn, err := sqlx.Connect(cfg.DatabaseDriver, cfg.getDatabaseDsn())
 		if err != nil {
 			cfg.Logger.WithField("driver", cfg.DatabaseDriver).WithError(err).Error("Failed to connect to database")
 			return nil

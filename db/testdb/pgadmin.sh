@@ -1,0 +1,1 @@
+.\helm upgrade --install --namespace vs-test --set pgadmin.username vstester --set pgadmin.password rootpw --set service.port 8000 pgadmin cetic/pgadmin

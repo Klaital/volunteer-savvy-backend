@@ -60,7 +60,12 @@ CREATE INDEX users_coordinated_sites_index ON site_coordinators(user_id);
 
 -- Schedules
 
-CREATE TYPE dotw_type AS ENUM('sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday');
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'dotw_type') THEN
+        CREATE TYPE dotw_type AS ENUM('sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday');
+    END IF;
+END$$;
 CREATE TABLE daily_schedules (
   id SERIAL PRIMARY KEY,
   site_id INTEGER REFERENCES sites(id),
