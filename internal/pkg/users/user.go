@@ -4,44 +4,43 @@ import (
 	"context"
 	"database/sql"
 	"github.com/jmoiron/sqlx"
+	"github.com/klaital/intmath"
 	"github.com/klaital/volunteer-savvy-backend/internal/pkg/filters"
 	log "github.com/sirupsen/logrus"
-	"github.com/klaital/intmath"
 )
 
 type User struct {
-	Id    uint64  `json:"-" db:"id"`
-	Guid  string `json:"user_guid" db:"user_guid"`
-	Email string `json:"email" db:"email"`
+	Id           uint64 `json:"-" db:"id"`
+	Guid         string `json:"user_guid" db:"user_guid"`
+	Email        string `json:"email" db:"email"`
 	PasswordHash string `json:"-" db:"password_digest"`
 
 	Roles map[uint64][]Role `json:"roles"` // the map key is the organization ID
 }
 
 type RoleType int
-const (
-	SiteAdmin  RoleType = 0 // Administrative permissions for Volunteer-Savvy as a whole
 
+const (
+	SiteAdmin RoleType = 0 // Administrative permissions for Volunteer-Savvy as a whole
 	OrgAdmin    RoleType = 1 // Administrative permissions for a single Organization
 	Volunteer   RoleType = 2 // User is able to sign up, log work.
 	SiteManager RoleType = 3 // User is able to sign up as a Site Coordinator for sites, then manage those sites' settings.
-	BackOffice  RoleType = 4 // User is able to log work, read and update suggestions, generate reports.
-	                         // Not able to modify Users or Site settings.
- 	Mobile      RoleType = 5 // User is interested in working at the Mobile sites.
- 	                         // Enables the user to opt-in to notifications about mobile sites specifically.
+	BackOffice  RoleType = 4 // User is able to log work, read and update suggestions, generate reports. Not able to modify Users or Site settings.
+	Mobile RoleType = 5 // User is interested in working at the Mobile sites. Enables the user to opt-in to notifications about mobile sites specifically.
 )
+
 type Role struct {
-	Id     uint64 `json:"-" db:"id"`
-	OrgId  uint64 `json:"organization_id" db:"org_id"`
-	UserId uint64 `json:"-" db:"user_id"`
-	UserGuid string `json:"user_guid"`
-	Role   RoleType `json:"name" db:"name"`
+	Id       uint64   `json:"-" db:"id"`
+	OrgId    uint64   `json:"org_id" db:"org_id"`
+	UserId   uint64   `json:"-" db:"user_id"`
+	UserGuid string   `json:"user_guid"`
+	Role     RoleType `json:"name" db:"name"`
 }
 
 func GetUserForLogin(ctx context.Context, email string, db *sqlx.DB) (*User, error) {
 	logger := filters.GetContextLogger(ctx).WithFields(log.Fields{
 		"operation": "GetUserForLogin",
-		"email": email,
+		"email":     email,
 	})
 
 	var u User
@@ -65,8 +64,8 @@ func GetUserForLogin(ctx context.Context, email string, db *sqlx.DB) (*User, err
 func (u *User) GetRoles(ctx context.Context, db *sqlx.DB) (map[uint64][]Role, error) {
 	logger := filters.GetContextLogger(ctx).WithFields(log.Fields{
 		"operation": "GetUserRoles",
-		"UserID": u.Id,
-		"UserGuid": u.Guid,
+		"UserID":    u.Id,
+		"UserGuid":  u.Guid,
 	})
 
 	// If the user's roles have already been loaded, just use that

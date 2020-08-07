@@ -44,8 +44,17 @@ CREATE TABLE users (
   email VARCHAR(128) UNIQUE NOT NULL,
   password_digest VARCHAR(128) NOT NULL
 );
-
 CREATE INDEX user_guid_index ON users(user_guid);
+
+CREATE TABLE roles (
+    id SERIAL PRIMARY KEY,
+    org_id INTEGER NOT NULL REFERENCES organizations(id),
+    user_id INTEGER NOT NULL REFERENCES users(id),
+    name INTEGER NOT NULL
+);
+CREATE INDEX roles_users_index ON roles(user_id);
+CREATE INDEX roles_org_users_index ON roles(user_id, org_id);
+CREATE UNIQUE INDEX roles_unique_index ON roles(user_id, org_id, name);
 
 -- Site Coordinators
 

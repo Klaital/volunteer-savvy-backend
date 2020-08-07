@@ -1,16 +1,16 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"golang.org/x/crypto/bcrypt"
 	"os"
 )
 
 func main() {
-	fmt.Printf("Enter password: ")
-	password := ""
-	fmt.Scanf("%s", &password)
-	cost := 4
+	password := os.Args[1]
+	var cost int
+	flag.IntVar(&cost, "cost", 4, "Bcrypt cost")
 
 
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), cost)

@@ -63,17 +63,10 @@ func (server *AuthServer) GrantTokenHandler(request *restful.Request, response *
 	email, password, ok := request.Request.BasicAuth()
 	logger.WithField("email", email)
 	if !ok {
-		logger.Error("no basic auth included")
-		response.WriteHeader(http.StatusBadRequest)
+		logger.Debug("no basic auth included")
+		response.WriteHeader(http.StatusUnauthorized)
 		return
 	}
-	hashedPassword, err := auth.HashPassword([]byte(password), server.Config.BcryptCost)
-	if err != nil {
-		logger.WithError(err).Error("Failed to hash password")
-		response.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
 	loggedInUser, err := users.GetUserForLogin(ctx, email, server.Config.GetDbConn())
 	if err != nil {
 		logger.WithError(err).Error("Error fetching user")
@@ -85,7 +78,7 @@ func (server *AuthServer) GrantTokenHandler(request *restful.Request, response *
 		response.WriteHeader(http.StatusNotFound)
 		return
 	}
-	if !auth.CheckPassword(hashedPassword, []byte(loggedInUser.PasswordHash)) {
+	if !auth.CheckPassword([]byte(loggedInUser.PasswordHash), []byte(password)) {
 		logger.WithField("PasswordLength", len(password)).Debug("Password mismatch")
 		response.WriteHeader(http.StatusUnauthorized)
 		return
@@ -107,8 +100,14 @@ func (server *AuthServer) GrantTokenHandler(request *restful.Request, response *
 		"iat":           time.Now().Unix(),
 		"sub":           loggedInUser.Guid,
 	}
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	tokenString, err := token.SignedString(server.Config.JwtPrivateKey)
+	token := jwt.NewWithClaims(jwt.SigningMethodRS512, claims)
+	privateKey, _ := server.Config.GetJWTKeys()
+	if privateKey == nil {
+		logger.Error("Failed to load JWT Keys")
+		response.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	tokenString, err := token.SignedString(privateKey)
 	if err != nil {
 		logger.WithError(err).Error("Failed to sign JWT")
 		response.WriteHeader(http.StatusInternalServerError)

@@ -1,10 +1,15 @@
 package config
 
 import (
+	"crypto/rsa"
+	"crypto/x509"
+	"encoding/base64"
+	"encoding/pem"
 	"fmt"
 	"github.com/caarlos0/env"
 	"github.com/jmoiron/sqlx"
 	"github.com/sirupsen/logrus"
+	"reflect"
 	"time"
 )
 
@@ -44,7 +49,9 @@ type ServiceConfig struct {
 	BcryptCost          int    `env:"BCRYPT_COST" envDefault:"5"`
 	TokenExpirationTime string `env:"JWT_EXPIRATION_DURATION" envDefault:"4h"`
 	JwtPrivateKey       string `env:"OAUTH_JWT_PRIVATE_KEY"`
+	jwtPrivateKey       *rsa.PrivateKey
 	JwtPublicKey        string `env:"OAUTH_JWT_PUBLIC_KEY"`
+	jwtPublicKey        *rsa.PublicKey
 }
 
 // GetTokenExpirationDuration converts the JWT_EXPIRATION_DURATION environment
@@ -122,7 +129,6 @@ func GetServiceConfig() (config *ServiceConfig, err error) {
 func (cfg *ServiceConfig) GetDbConn() *sqlx.DB {
 	// Construct the singleton db connection pool if needed
 	if cfg.databaseConnection == nil {
-		fmt.Printf("Connecting to %s db: %s\n", cfg.DatabaseDriver, cfg.getDatabaseDsn())
 		dbConn, err := sqlx.Connect(cfg.DatabaseDriver, cfg.getDatabaseDsn())
 		if err != nil {
 			cfg.Logger.WithField("driver", cfg.DatabaseDriver).WithError(err).Error("Failed to connect to database")
@@ -132,4 +138,52 @@ func (cfg *ServiceConfig) GetDbConn() *sqlx.DB {
 	}
 
 	return cfg.databaseConnection
+}
+
+func (cfg *ServiceConfig) GetJWTKeys() (*rsa.PrivateKey, *rsa.PublicKey) {
+	if cfg.jwtPublicKey == nil {
+		// Try to base64 decode it once, since that's how we have to handle it for local run and testing
+		tmpKey, err := base64.StdEncoding.DecodeString(cfg.JwtPublicKey)
+		if err != nil {
+			tmpKey = []byte(cfg.JwtPublicKey)
+		}
+		block, _ := pem.Decode(tmpKey)
+		if block == nil {
+			cfg.Logger.WithField("JWTPublicKey", string(tmpKey)).Error("ssh: no public key found")
+			return nil, nil
+		}
+		publicKeyTmp, err := x509.ParsePKIXPublicKey(block.Bytes)
+		if err != nil {
+			cfg.Logger.WithError(err).Error("Failed to parse public key")
+			return nil, nil
+		}
+		publicKey, ok := publicKeyTmp.(*rsa.PublicKey)
+		if !ok {
+			cfg.Logger.Errorf("Failed to cast public key to rsa pointer: %v", reflect.TypeOf(publicKeyTmp))
+			return nil, nil
+		}
+		cfg.jwtPublicKey = publicKey
+	}
+
+	if cfg.jwtPrivateKey == nil {
+		// Try to base64 decode it once, since that's how we have to handle it for local run and testing
+		tmpKey, err := base64.StdEncoding.DecodeString(cfg.JwtPrivateKey)
+		if err != nil {
+			tmpKey = []byte(cfg.JwtPrivateKey)
+		}
+		block, _ := pem.Decode(tmpKey)
+		if block == nil {
+			cfg.Logger.Error("ssh: no private key found")
+			return nil, nil
+		}
+		privateKey, err := x509.ParsePKCS1PrivateKey(block.Bytes)
+		if err != nil {
+			cfg.Logger.WithError(err).Error("Failed to parse private key")
+			return nil, nil
+		}
+		cfg.jwtPrivateKey = privateKey
+	}
+
+	// Success!
+	return cfg.jwtPrivateKey, cfg.jwtPublicKey
 }

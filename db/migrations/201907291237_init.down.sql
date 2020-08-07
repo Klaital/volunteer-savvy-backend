@@ -8,6 +8,11 @@ DROP TABLE IF EXISTS sites;
 -- Users & Roles
 DROP INDEX IF EXISTS user_guid_index;
 DROP TABLE IF EXISTS users CASCADE;
+DROP TABLE IF EXISTS roles CASCADE ;
+DROP INDEX IF EXISTS roles_users_index;
+DROP INDEX IF EXISTS roles_org_users_index;
+DROP INDEX IF EXISTS roles_unique_index;
+
 
 -- Site Coordinators
 DROP INDEX IF EXISTS sites_coordinators_index;
