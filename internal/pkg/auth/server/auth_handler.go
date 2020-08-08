@@ -10,7 +10,6 @@ import (
 	"github.com/klaital/volunteer-savvy-backend/internal/pkg/version"
 	log "github.com/sirupsen/logrus"
 	"net/http"
-	"time"
 )
 
 type AuthServer struct {
@@ -36,7 +35,7 @@ func (server *AuthServer) GetAuthAPI() *restful.WebService {
 		service.POST("/token").
 			//Filter(filters.RateLimitingFilter).
 			To(server.GrantTokenHandler).
-			Doc("List Organizations").
+			Doc("User login. Returns a signed JWT.").
 			Produces(restful.MIME_JSON).
 			Writes(AccessTokenResponse{}).
 			Returns(http.StatusOK, "Successfully logged in.", AccessTokenResponse{}).
@@ -86,7 +85,7 @@ func (server *AuthServer) GrantTokenHandler(request *restful.Request, response *
 
 	// The user is logged in!
 	// Now fetch their roles to include in the JWT
-	roles, err := loggedInUser.GetRoles(ctx, server.Config.GetDbConn())
+	_, err = loggedInUser.GetRoles(ctx, server.Config.GetDbConn())
 	if err != nil {
 		logger.WithError(err).Error("Failed to get user's roles")
 		response.WriteHeader(http.StatusInternalServerError)
@@ -94,12 +93,13 @@ func (server *AuthServer) GrantTokenHandler(request *restful.Request, response *
 	}
 
 	// Add the user GUID to the roles
-	claims := jwt.MapClaims{
-		"organizations": roles,
-		"exp":           time.Now().Add(server.Config.GetTokenExpirationDuration()),
-		"iat":           time.Now().Unix(),
-		"sub":           loggedInUser.Guid,
-	}
+	claims := auth.CreateJWT(loggedInUser, server.Config.GetTokenExpirationDuration())
+	//claims := jwt.MapClaims{
+	//	"organizations": roles,
+	//	"exp":           time.Now().Add(server.Config.GetTokenExpirationDuration()),
+	//	"iat":           time.Now().Unix(),
+	//	"sub":           loggedInUser.Guid,
+	//}
 	token := jwt.NewWithClaims(jwt.SigningMethodRS512, claims)
 	privateKey, _ := server.Config.GetJWTKeys()
 	if privateKey == nil {
@@ -117,7 +117,7 @@ func (server *AuthServer) GrantTokenHandler(request *restful.Request, response *
 	responseData := AccessTokenResponse{
 		AccessToken: tokenString,
 		ExpiresIn:   uint(server.Config.GetTokenExpirationDuration().Seconds()),
-		Permissions: roles,
+		Permissions: loggedInUser.Roles,
 	}
 
 	err = response.WriteEntity(responseData)

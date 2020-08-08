@@ -69,12 +69,6 @@ func (cfg *ServiceConfig) GetTokenExpirationDuration() time.Duration {
 var serviceConfig *ServiceConfig
 
 func (cfg *ServiceConfig) getDatabaseDsn() string {
-	//return fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable",
-	//	cfg.DatabaseHost,
-	//	cfg.DatabasePort,
-	//	cfg.DatabaseUser,
-	//	cfg.DatabasePassword,
-	//	cfg.DatabaseName)
 	return fmt.Sprintf("%s://%s:%s@%s:%d/%s?sslmode=disable", cfg.DatabaseDriver, cfg.DatabaseUser, cfg.DatabasePassword, cfg.DatabaseHost, cfg.DatabasePort, cfg.DatabaseName)
 }
 func GetServiceConfig() (config *ServiceConfig, err error) {

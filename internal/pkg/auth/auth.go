@@ -1,15 +1,16 @@
 package auth
 
 import (
+	"crypto/rsa"
 	"fmt"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/klaital/volunteer-savvy-backend/internal/pkg/users"
 	"golang.org/x/crypto/bcrypt"
+	"time"
 )
 type Claims struct {
-	Username string `json:"username"`
 	jwt.StandardClaims
-	Roles map[uint64][]users.Role
+	Roles map[uint64][]users.Role `json:"orgs"`
 }
 
 func HashPassword(pwd []byte, cost int) (hash []byte, err error) {
@@ -21,24 +22,32 @@ func CheckPassword(hash, password []byte) bool {
 	return err == nil
 }
 
-func ParseJwt(tokenString, secret string) (userGuid string, t *jwt.Token, err error) {
+func ParseJwt(tokenString string, publicKey *rsa.PublicKey) (t *jwt.Token, err error) {
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+		if _, ok := token.Method.(*jwt.SigningMethodRSA); !ok {
 			return nil, fmt.Errorf("unexpected signing method %v", token.Header["alg"])
 		}
-		return secret, nil
+		return publicKey, nil
 	})
 	if err != nil {
-		return "", nil, err
+		return nil, err
 	}
 
-	if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
+	if _, ok := token.Claims.(Claims); ok && token.Valid {
 		// Success!
-		if sub, ok := claims["sub"].(string); ok {
-			return sub, token, nil
-		}
-		return "", token, fmt.Errorf("invalid sub: %v", claims["sub"])
+		return token, nil
 	}
 
-	return "", nil, fmt.Errorf("failed to parse JWT claims")
+	return nil, fmt.Errorf("failed to parse JWT claims")
+}
+
+func CreateJWT(user *users.User, expirationDuration time.Duration) *Claims {
+	jwtTime := time.Now()
+	return &Claims{
+		StandardClaims: jwt.StandardClaims{
+			ExpiresAt: jwtTime.Add(expirationDuration).Unix(),
+			IssuedAt:  jwtTime.Unix(),
+			Subject:   user.Guid,
+		},
+	}
 }
