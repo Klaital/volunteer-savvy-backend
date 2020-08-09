@@ -94,12 +94,6 @@ func (server *AuthServer) GrantTokenHandler(request *restful.Request, response *
 
 	// Add the user GUID to the roles
 	claims := auth.CreateJWT(loggedInUser, server.Config.GetTokenExpirationDuration())
-	//claims := jwt.MapClaims{
-	//	"organizations": roles,
-	//	"exp":           time.Now().Add(server.Config.GetTokenExpirationDuration()),
-	//	"iat":           time.Now().Unix(),
-	//	"sub":           loggedInUser.Guid,
-	//}
 	token := jwt.NewWithClaims(jwt.SigningMethodRS512, claims)
 	privateKey, _ := server.Config.GetJWTKeys()
 	if privateKey == nil {

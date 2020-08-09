@@ -37,6 +37,17 @@ type Role struct {
 	Role     RoleType `json:"name" db:"name"`
 }
 
+// FindUser queries the database for the user and all other data needed to
+// display their profile.
+func FindUser(ctx context.Context, email string, db *sqlx.DB) (*User, error) {
+	user, err := GetUserForLogin(ctx, email, db)
+	if err != nil {
+		return nil, err
+	}
+	_, err = user.GetRoles(ctx, db)
+	return user, err
+}
+
 func GetUserForLogin(ctx context.Context, email string, db *sqlx.DB) (*User, error) {
 	logger := filters.GetContextLogger(ctx).WithFields(log.Fields{
 		"operation": "GetUserForLogin",
@@ -50,7 +61,7 @@ func GetUserForLogin(ctx context.Context, email string, db *sqlx.DB) (*User, err
 		if err == sql.ErrNoRows {
 			return nil, nil
 		}
-		logger.WithError(err).Error("Failed to select user with email/password")
+		logger.WithError(err).Error("Failed to select user with email")
 		return nil, err
 	}
 

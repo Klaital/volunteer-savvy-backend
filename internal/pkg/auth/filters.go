@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/rsa"
 	"github.com/emicklei/go-restful"
-	"github.com/klaital/volunteer-savvy-backend/internal/pkg/config"
 	"github.com/klaital/volunteer-savvy-backend/internal/pkg/filters"
 	"github.com/klaital/volunteer-savvy-backend/internal/pkg/users"
 	"net/http"
@@ -28,11 +27,11 @@ func  (authConfig AuthConfig) extractJWT(req *restful.Request) (*Claims) {
 		return nil
 	}
 
-	claims, ok := token.Claims.(Claims)
+	claims, ok := token.Claims.(*Claims)
 	if !ok {
 		return nil
 	}
-	return &claims
+	return claims
 }
 
 // AuthConfig is used as a reciever for auth-related filters in order to pass
@@ -60,15 +59,13 @@ func (authConfig AuthConfig) ValidJwtFilter(req *restful.Request, resp *restful.
 		return
 	}
 
-	cfg, err := config.GetServiceConfig()
+	token, err := ParseJwt(jwtRaw, authConfig.PublicKey)
 	if err != nil {
-		logger.WithError(err).Error("Failed to get service configuration for JWT filter")
+		logger.WithError(err).Error("Failed to extract JWT from bearer token")
 		resp.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	_, publicKey := cfg.GetJWTKeys()
-	token, err := ParseJwt(jwtRaw, publicKey)
-	claims, ok := token.Claims.(Claims)
+	claims, ok := token.Claims.(*Claims)
 	if !ok {
 		logger.Error("Failed to parse claims")
 		resp.WriteHeader(http.StatusBadRequest)

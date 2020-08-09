@@ -5,9 +5,11 @@ import (
 	"fmt"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/klaital/volunteer-savvy-backend/internal/pkg/users"
+	log "github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
 	"time"
 )
+
 type Claims struct {
 	jwt.StandardClaims
 	Roles map[uint64][]users.Role `json:"orgs"`
@@ -23,17 +25,17 @@ func CheckPassword(hash, password []byte) bool {
 }
 
 func ParseJwt(tokenString string, publicKey *rsa.PublicKey) (t *jwt.Token, err error) {
-	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodRSA); !ok {
 			return nil, fmt.Errorf("unexpected signing method %v", token.Header["alg"])
 		}
 		return publicKey, nil
 	})
 	if err != nil {
+		log.WithError(err).Error("ParseWithClaims failed")
 		return nil, err
 	}
-
-	if _, ok := token.Claims.(Claims); ok && token.Valid {
+	if _, ok := token.Claims.(*Claims); ok && token.Valid {
 		// Success!
 		return token, nil
 	}

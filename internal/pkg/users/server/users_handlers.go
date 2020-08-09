@@ -26,10 +26,11 @@ func New(cfg *config.ServiceConfig) *UserServer {
 func (server *UserServer) GetUsersAPI() *restful.WebService {
 	service := new(restful.WebService)
 	service.Path(server.Config.BasePath + "/users").ApiVersion(server.ApiVersion)
-
+	_, publicKey := server.Config.GetJWTKeys()
+	authConfig := auth.AuthConfig{PublicKey: publicKey}
 	service.Route(
 		service.GET("/").
-			Filter(auth.ValidJwtFilter).
+			Filter(authConfig.ValidJwtFilter).
 			//Filter(filters.RateLimitingFilter).
 			To(server.ListUsersHandler).
 			Doc("Fetch all users' details").
@@ -85,23 +86,16 @@ func (server *UserServer) ListUsersHandler(request *restful.Request, response *r
 		"operation": "ListUsersHandler",
 	})
 
-	appConfig, err := config.GetServiceConfig()
-	if err != nil {
-		logger.WithError(err).Error("Failed to load service config")
-		response.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
 	// Fetch users for organizations where the logged-in user is an Admin
 
-	users, err := users.ListUsersInSameOrgs(ctx, request.Attribute("jwt.sub").(string), appConfig.GetDbConn())
+	userSet, err := users.ListUsersInSameOrgs(ctx, request.Attribute("jwt.sub").(string), server.Config.GetDbConn())
 	if err != nil {
 		logger.WithError(err).Error("Failed to list users")
 		response.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
-	err = response.WriteEntity(ListUsersResponse{Users: users})
+	err = response.WriteEntity(ListUsersResponse{Users: userSet})
 	if err != nil {
 		logger.WithError(err).Error("Failed to serialize users")
 		response.WriteHeader(http.StatusInternalServerError)
