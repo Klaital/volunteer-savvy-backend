@@ -2,7 +2,6 @@ package server
 
 import (
 	"github.com/emicklei/go-restful"
-	"github.com/klaital/volunteer-savvy-backend/internal/pkg/auth"
 	"github.com/klaital/volunteer-savvy-backend/internal/pkg/config"
 	"github.com/klaital/volunteer-savvy-backend/internal/pkg/filters"
 	"github.com/klaital/volunteer-savvy-backend/internal/pkg/users"
@@ -27,7 +26,7 @@ func (server *UserServer) GetUsersAPI() *restful.WebService {
 	service := new(restful.WebService)
 	service.Path(server.Config.BasePath + "/users").ApiVersion(server.ApiVersion)
 	_, publicKey := server.Config.GetJWTKeys()
-	authConfig := auth.AuthConfig{PublicKey: publicKey}
+	authConfig := users.AuthConfig{PublicKey: publicKey}
 	service.Route(
 		service.GET("/").
 			Filter(authConfig.ValidJwtFilter).
@@ -88,7 +87,14 @@ func (server *UserServer) ListUsersHandler(request *restful.Request, response *r
 
 	// Fetch users for organizations where the logged-in user is an Admin
 
-	userSet, err := users.ListUsersInSameOrgs(ctx, request.Attribute("jwt.sub").(string), server.Config.GetDbConn())
+	// Extract the list of Org IDs to enumerate
+	claims := users.GetRequestJWTClaims(request)
+	if claims == nil {
+		logger.Error("No JWT claims available on request")
+		response.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	userSet, err := users.ListUsersInSameOrgs(ctx, claims, server.Config.GetDbConn())
 	if err != nil {
 		logger.WithError(err).Error("Failed to list users")
 		response.WriteHeader(http.StatusInternalServerError)

@@ -3,27 +3,14 @@ package server
 import (
 	"github.com/dgrijalva/jwt-go"
 	"github.com/emicklei/go-restful"
-	"github.com/klaital/volunteer-savvy-backend/internal/pkg/auth"
-	"github.com/klaital/volunteer-savvy-backend/internal/pkg/config"
 	"github.com/klaital/volunteer-savvy-backend/internal/pkg/filters"
 	"github.com/klaital/volunteer-savvy-backend/internal/pkg/users"
-	"github.com/klaital/volunteer-savvy-backend/internal/pkg/version"
 	log "github.com/sirupsen/logrus"
 	"net/http"
 )
 
-type AuthServer struct {
-	ApiVersion string
-	Config     *config.ServiceConfig
-}
 
-func New(cfg *config.ServiceConfig) *AuthServer {
-	return &AuthServer{
-		ApiVersion: version.Version,
-		Config:     cfg,
-	}
-}
-func (server *AuthServer) GetAuthAPI() *restful.WebService {
+func (server *UserServer) GetAuthAPI() *restful.WebService {
 
 	service := new(restful.WebService)
 	service.Path(server.Config.BasePath + "/auth").ApiVersion(server.ApiVersion).Doc("Volunteer-Savvy Backend")
@@ -53,7 +40,7 @@ type AccessTokenResponse struct {
 // GrantTokenHandler allows users to log in with their email/password, and get
 // back a signed JWT in response
 // TODO: support client_credentials grant type if we split into microservices
-func (server *AuthServer) GrantTokenHandler(request *restful.Request, response *restful.Response) {
+func (server *UserServer) GrantTokenHandler(request *restful.Request, response *restful.Response) {
 	ctx := filters.GetRequestContext(request)
 	logger := filters.GetContextLogger(ctx).WithFields(log.Fields{
 		"operation": "GrantTokenHandler",
@@ -77,7 +64,7 @@ func (server *AuthServer) GrantTokenHandler(request *restful.Request, response *
 		response.WriteHeader(http.StatusNotFound)
 		return
 	}
-	if !auth.CheckPassword([]byte(loggedInUser.PasswordHash), []byte(password)) {
+	if !users.CheckPassword([]byte(loggedInUser.PasswordHash), []byte(password)) {
 		logger.WithField("PasswordLength", len(password)).Debug("Password mismatch")
 		response.WriteHeader(http.StatusUnauthorized)
 		return
@@ -93,7 +80,7 @@ func (server *AuthServer) GrantTokenHandler(request *restful.Request, response *
 	}
 
 	// Add the user GUID to the roles
-	claims := auth.CreateJWT(loggedInUser, server.Config.GetTokenExpirationDuration())
+	claims := users.CreateJWT(loggedInUser, server.Config.GetTokenExpirationDuration())
 	token := jwt.NewWithClaims(jwt.SigningMethodRS512, claims)
 	privateKey, _ := server.Config.GetJWTKeys()
 	if privateKey == nil {

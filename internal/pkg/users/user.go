@@ -113,38 +113,23 @@ func (u *User) GetRoles(ctx context.Context, db *sqlx.DB) (map[uint64][]Role, er
 	return mappedRoles, nil
 }
 
-func ListUsersInSameOrgs(ctx context.Context, userGuid string, db *sqlx.DB) ([]User, error) {
+func ListUsersInSameOrgs(ctx context.Context, jwtClaims *Claims, db *sqlx.DB) ([]User, error) {
 	logger := filters.GetContextLogger(ctx).WithFields(log.Fields{
 		"operation": "ListUsersInSameOrgs",
 	})
 
-	// Pull the roles belonging to the user
-	var roles []Role
-	sqlStmt := db.Rebind(`
-SELECT 
-	r.id AS id, 
-	r.org_id AS org_id, 
-	r.user_id AS user_id, 
-	r.name AS name 
-FROM roles AS r JOIN users AS u 
-	ON r.user_id = u.id
-WHERE u.user_guid = ?`)
-
-	err := db.Select(&roles, sqlStmt, userGuid)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return []User{}, nil
-		}
-		return []User{}, err
-	}
-
-	// Sort the roles by Organization
+	// Compile a list of all orgs where the user claims any Role
 	orgIdSet := intmath.NewSet()
-	for _, role := range roles {
-		orgIdSet.Add(int64(role.OrgId))
+	//logger.WithField("Claims", *jwtClaims).Info("Getting org IDs from claims")
+	for orgId := range jwtClaims.Roles {
+		orgIdSet.Add(int64(orgId))
 	}
 
-	sqlStmt = `
+	if orgIdSet.Length() == 0 {
+		return []User{}, nil
+	}
+
+	sqlStmt := `
 SELECT 
 	u.id, u.user_guid, u.email
 FROM users AS u JOIN roles AS r 

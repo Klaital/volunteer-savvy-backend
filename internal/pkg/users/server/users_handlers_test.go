@@ -2,11 +2,11 @@ package server
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/emicklei/go-restful"
-	"github.com/klaital/volunteer-savvy-backend/internal/pkg/auth"
 	"github.com/klaital/volunteer-savvy-backend/internal/pkg/config"
 	"github.com/klaital/volunteer-savvy-backend/internal/pkg/testhelpers"
 	"github.com/klaital/volunteer-savvy-backend/internal/pkg/users"
@@ -97,6 +97,7 @@ func (suite *UserServerTestSuite) TestListUsersHandler() {
 	var req *http.Request
 	var err error
 	var tokenStr string
+	var listUsersResponse ListUsersResponse
 
 	//
 	// No JWT included
@@ -123,6 +124,27 @@ func (suite *UserServerTestSuite) TestListUsersHandler() {
 	suite.Assert().Equal(http.StatusOK, resp.Code, "ListUsers API returned incorrect response code")
 
 	// TODO: check that the users listed are only from the Orgs where the logged-in user is an Admin. If the user is a superadmin, all of them.
+	// Kit should be able to see user2 and user3, but not user4
+	err = json.Unmarshal(resp.Body.Bytes(), &listUsersResponse)
+	if err != nil {
+		suite.T().Fatal(err)
+	}
+	expectUsersListed := map[string]bool {
+		"user2": true,
+		"user3": true,
+		"user4": false,
+	}
+	usersListed := make(map[string]bool, 3)
+	for _, user := range listUsersResponse.Users {
+		usersListed[user.Guid] = true
+	}
+	for userGuid, expectFound := range expectUsersListed {
+		if expectFound != usersListed[userGuid] {
+			suite.T().Errorf("Expected user %s to be %t. Got %t. Full list: %+v", userGuid, expectFound, usersListed[userGuid], listUsersResponse)
+
+		}
+	}
+
 }
 
 func GetUserAuthHeader(email string, config *config.ServiceConfig) (string, error) {
@@ -136,7 +158,7 @@ func GetUserAuthHeader(email string, config *config.ServiceConfig) (string, erro
 		return "", err
 	}
 
-	claims := auth.CreateJWT(user, config.GetTokenExpirationDuration())
+	claims := users.CreateJWT(user, config.GetTokenExpirationDuration())
 	token := jwt.NewWithClaims(jwt.SigningMethodRS512, claims)
 	privateKey, _ := config.GetJWTKeys()
 	if privateKey == nil {

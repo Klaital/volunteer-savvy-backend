@@ -1,11 +1,10 @@
-package auth
+package users
 
 import (
 	"context"
 	"crypto/rsa"
 	"github.com/emicklei/go-restful"
 	"github.com/klaital/volunteer-savvy-backend/internal/pkg/filters"
-	"github.com/klaital/volunteer-savvy-backend/internal/pkg/users"
 	"net/http"
 	"strings"
 )
@@ -81,6 +80,7 @@ func (authConfig AuthConfig) ValidJwtFilter(req *restful.Request, resp *restful.
 	ctx = context.WithValue(ctx, "logger", logger)
 	req.SetAttribute("ctx", ctx)
 	req.SetAttribute("jwt", token)
+	req.SetAttribute("jwt.claims", claims)
 	req.SetAttribute("jwt.sub", claims.Subject)
 
 	chain.ProcessFilter(req, resp)
@@ -91,7 +91,7 @@ func (authConfig AuthConfig) ValidJwtFilter(req *restful.Request, resp *restful.
 func (authConfig AuthConfig) RequiresSuperAdminFilter(req *restful.Request, resp *restful.Response, chain *restful.FilterChain) {
 	jwtClaims := authConfig.extractJWT(req)
 	for _, superRole := range jwtClaims.Roles[0] {
-		if superRole.Role == users.SiteAdmin {
+		if superRole.Role == SiteAdmin {
 			chain.ProcessFilter(req, resp)
 			return
 		}

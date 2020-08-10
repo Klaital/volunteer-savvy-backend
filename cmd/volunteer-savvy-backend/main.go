@@ -5,7 +5,6 @@ import (
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
-	aServer "github.com/klaital/volunteer-savvy-backend/internal/pkg/auth/server"
 	"github.com/klaital/volunteer-savvy-backend/internal/pkg/config"
 	oServer "github.com/klaital/volunteer-savvy-backend/internal/pkg/organizations/server"
 	"github.com/klaital/volunteer-savvy-backend/internal/pkg/server"
@@ -61,7 +60,7 @@ func main() {
 	// Initialize the server
 	orgServer := oServer.New(cfg)
 	sitesServer := sServer.New(cfg)
-	authServer := aServer.New(cfg)
+	authServer := uServer.New(cfg)
 	usersServer := uServer.New(cfg)
 
 	services := []*restful.WebService{

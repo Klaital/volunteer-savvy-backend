@@ -1,10 +1,10 @@
-package auth
+package users
 
 import (
 	"crypto/rsa"
 	"fmt"
 	"github.com/dgrijalva/jwt-go"
-	"github.com/klaital/volunteer-savvy-backend/internal/pkg/users"
+	"github.com/emicklei/go-restful"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
 	"time"
@@ -12,7 +12,7 @@ import (
 
 type Claims struct {
 	jwt.StandardClaims
-	Roles map[uint64][]users.Role `json:"orgs"`
+	Roles map[uint64][]Role `json:"orgs"`
 }
 
 func HashPassword(pwd []byte, cost int) (hash []byte, err error) {
@@ -43,7 +43,16 @@ func ParseJwt(tokenString string, publicKey *rsa.PublicKey) (t *jwt.Token, err e
 	return nil, fmt.Errorf("failed to parse JWT claims")
 }
 
-func CreateJWT(user *users.User, expirationDuration time.Duration) *Claims {
+func GetRequestJWTClaims(req *restful.Request) *Claims {
+	claimAttr := req.Attribute("jwt.claims")
+	claims, ok := claimAttr.(*Claims)
+	if ok {
+		return claims
+	}
+	return nil
+}
+
+func CreateJWT(user *User, expirationDuration time.Duration) *Claims {
 	jwtTime := time.Now()
 	return &Claims{
 		StandardClaims: jwt.StandardClaims{
