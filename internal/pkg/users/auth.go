@@ -12,7 +12,7 @@ import (
 
 type Claims struct {
 	jwt.StandardClaims
-	Roles map[uint64][]Role `json:"orgs"`
+	Roles map[uint64][]RoleType `json:"orgs"`
 }
 
 func HashPassword(pwd []byte, cost int) (hash []byte, err error) {
@@ -52,13 +52,34 @@ func GetRequestJWTClaims(req *restful.Request) *Claims {
 	return nil
 }
 
+func DecodeJWT(jwtRaw string, publicKey *rsa.PublicKey) *Claims {
+	token, err := ParseJwt(jwtRaw, publicKey)
+	if err != nil {
+		return nil
+	}
+
+	claims, ok := token.Claims.(*Claims)
+	if !ok {
+		return nil
+	}
+	return claims
+}
+
 func CreateJWT(user *User, expirationDuration time.Duration) *Claims {
 	jwtTime := time.Now()
+	roles := make(map[uint64][]RoleType, len(user.Roles))
+	for orgId, roleSet := range user.Roles {
+		roles[orgId] = make([]RoleType, len(roleSet))
+		for i := range roleSet {
+			roles[orgId][i] = roleSet[i].Role
+		}
+	}
 	return &Claims{
 		StandardClaims: jwt.StandardClaims{
 			ExpiresAt: jwtTime.Add(expirationDuration).Unix(),
 			IssuedAt:  jwtTime.Unix(),
 			Subject:   user.Guid,
 		},
+		Roles: roles,
 	}
 }

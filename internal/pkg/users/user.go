@@ -18,24 +18,6 @@ type User struct {
 	Roles map[uint64][]Role `json:"roles"` // the map key is the organization ID
 }
 
-type RoleType int
-
-const (
-	SiteAdmin RoleType = 0 // Administrative permissions for Volunteer-Savvy as a whole
-	OrgAdmin    RoleType = 1 // Administrative permissions for a single Organization
-	Volunteer   RoleType = 2 // User is able to sign up, log work.
-	SiteManager RoleType = 3 // User is able to sign up as a Site Coordinator for sites, then manage those sites' settings.
-	BackOffice  RoleType = 4 // User is able to log work, read and update suggestions, generate reports. Not able to modify Users or Site settings.
-	Mobile RoleType = 5 // User is interested in working at the Mobile sites. Enables the user to opt-in to notifications about mobile sites specifically.
-)
-
-type Role struct {
-	Id       uint64   `json:"-" db:"id"`
-	OrgId    uint64   `json:"org_id" db:"org_id"`
-	UserId   uint64   `json:"-" db:"user_id"`
-	UserGuid string   `json:"user_guid"`
-	Role     RoleType `json:"name" db:"name"`
-}
 
 // FindUser queries the database for the user and all other data needed to
 // display their profile.
@@ -120,22 +102,21 @@ func ListUsersInSameOrgs(ctx context.Context, jwtClaims *Claims, db *sqlx.DB) ([
 
 	// Compile a list of all orgs where the user claims any Role
 	orgIdSet := intmath.NewSet()
-	//logger.WithField("Claims", *jwtClaims).Info("Getting org IDs from claims")
 	for orgId := range jwtClaims.Roles {
 		orgIdSet.Add(int64(orgId))
 	}
 
 	if orgIdSet.Length() == 0 {
+		logger.WithField("Claims", *jwtClaims).Debug("No claims to find users against")
 		return []User{}, nil
 	}
 
-	sqlStmt := `
+	sqlStmt, args, err := sqlx.In(`
 SELECT 
 	u.id, u.user_guid, u.email
 FROM users AS u JOIN roles AS r 
 	ON u.id = r.user_id
-WHERE r.org_id IN (?)`
-	sqlStmt, args, err := sqlx.In(sqlStmt, orgIdSet.GetItems())
+WHERE r.org_id IN (?)`, orgIdSet.GetItems())
 	if err != nil {
 		logger.WithError(err).Error("Failed to compile IN query")
 		return []User{}, err
@@ -143,7 +124,18 @@ WHERE r.org_id IN (?)`
 
 	// Load the users from the DB
 	var users []User
-	err = db.Select(&users, sqlStmt, args...)
+	err = db.Select(&users, db.Rebind(sqlStmt), args...)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			logger.WithField("SQL", sqlStmt).WithError(err).Debug("No users returned")
+			return []User{}, nil
+		}
+		logger.WithFields(log.Fields{
+			"sqlstmt": sqlStmt,
+			"orgIds": args,
+		}).WithError(err).Error("Failed to query users")
+		return []User{}, err
+	}
 
 	// Load those user's Roles
 	// OPTIMIZATION: make this a JOIN query with the users SELECT

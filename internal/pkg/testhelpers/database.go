@@ -1,11 +1,11 @@
 package testhelpers
 
 import (
-	"fmt"
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/jmoiron/sqlx"
+	log "github.com/sirupsen/logrus"
 	"io/ioutil"
 	"path/filepath"
 	"strings"
@@ -29,6 +29,7 @@ func LoadFixtures(db *sqlx.DB, fixturesDirectory string) error {
 			sqlStmt := db.Rebind(string(sqlBytes))
 			_, err = db.Exec(sqlStmt)
 			if err != nil {
+				log.WithError(err).Error("failed to run fixture")
 				return err
 			}
 		}
@@ -40,46 +41,12 @@ func LoadFixtures(db *sqlx.DB, fixturesDirectory string) error {
 
 // DropAllTables enumerates all tables and drops them.
 func DropAllTables(db *sqlx.DB) error {
-	tables := make([]string, 0)
-	sqlStmt := `SELECT tablename FROM pg_catalog.pg_tables WHERE schemaname != 'pg_catalog' AND schemaname != 'information_schema'`
-	err := db.Select(&tables, sqlStmt)
+	driver, err := postgres.WithInstance(db.DB, &postgres.Config{})
 	if err != nil {
 		return err
 	}
-
-	for _, tableName := range tables {
-		sqlStmt := fmt.Sprintf("DROP TABLE IF EXISTS %s CASCADE", tableName)
-		_, err = db.Exec(sqlStmt)
-		if err != nil {
-			return err
-		}
-	}
-
-	// Success!
+	driver.Drop()
 	return nil
-}
-
-// ResetFixtures truncates all tables, then reruns all .sql files in the fixtures directory.
-func ResetFixtures(db *sqlx.DB, fixturesDir string) error {
-	// Scan for all table names
-	tables := make([]string, 0)
-	sqlStmt := `SELECT tablename FROM pg_catalog.pg_tables WHERE schemaname != 'pg_catalog' AND schemaname != 'information_schema'`
-	err := db.Select(&tables, sqlStmt)
-	if err != nil {
-		return err
-	}
-
-	// Truncate each of them
-	for _, tableName := range tables {
-		sqlStmt := fmt.Sprintf("TRUNCATE %s RESTART IDENTITY CASCADE", tableName)
-		_, err = db.Exec(sqlStmt)
-		if err != nil {
-			return err
-		}
-	}
-
-	// Reload the fixture data
-	return LoadFixtures(db, fixturesDir)
 }
 
 // InitializeDatabase drops all tables in the provided database, then runs the migrations
@@ -90,15 +57,15 @@ func InitializeDatabase(db *sqlx.DB, migrationsDir, fixturesDir string) error {
 	if err != nil {
 		return err
 	}
+
 	m, err := migrate.NewWithDatabaseInstance(migrationsDir, "postgres", driver)
 	if err != nil {
 		return err
 	}
-
 	err = m.Up()
 	if err != nil && err != migrate.ErrNoChange {
 		return err
 	}
-	err = ResetFixtures(db, fixturesDir)
+	err = LoadFixtures(db, fixturesDir)
 	return err
 }

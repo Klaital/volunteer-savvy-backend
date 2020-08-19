@@ -5,6 +5,7 @@ import (
 	"github.com/emicklei/go-restful"
 	uuid "github.com/satori/go.uuid"
 	log "github.com/sirupsen/logrus"
+	"os"
 )
 
 // SetContextFilter generates a RequestID for this request, and configures a
@@ -58,7 +59,33 @@ func GetContextLogger(ctx context.Context) *log.Entry {
 		}
 	}
 
-	logger := log.NewEntry(log.New())
+
+	baseLogger := log.New()
+
+	// Configure the logger from env vars
+	logLevelStr := os.Getenv("LOG_LEVEL")
+	logLevel, err := log.ParseLevel(logLevelStr)
+	if err != nil {
+		baseLogger.WithError(err).WithField("envLevel", logLevelStr).Error("Failed to parse log level")
+		logLevel = log.DebugLevel
+	}
+	baseLogger.SetLevel(logLevel)
+
+	logFormat := os.Getenv("LOG_FORMAT")
+	switch logFormat {
+	case "text":
+		baseLogger.SetFormatter(&log.TextFormatter{})
+	case "json":
+		baseLogger.SetFormatter(&log.JSONFormatter{})
+	case "prettyjson":
+		baseLogger.SetFormatter(&log.JSONFormatter{
+			PrettyPrint:      true,
+		})
+	default:
+		baseLogger.SetFormatter(&log.TextFormatter{})
+	}
+
+	logger := log.NewEntry(baseLogger)
 
 	// initialize one if needed with standard fields from the context
 	if requestID, ok := ctx.Value("request-id").(string); ok && len(requestID) > 0 {

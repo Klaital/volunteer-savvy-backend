@@ -1,6 +1,7 @@
 package server
 
 import (
+	"fmt"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/emicklei/go-restful"
 	"github.com/klaital/volunteer-savvy-backend/internal/pkg/filters"
@@ -78,6 +79,7 @@ func (server *UserServer) GrantTokenHandler(request *restful.Request, response *
 		response.WriteHeader(http.StatusInternalServerError)
 		return
 	}
+	logger.WithField("LoggingInUser", fmt.Sprintf("%+v", loggedInUser)).Debug("Added user's roles")
 
 	// Add the user GUID to the roles
 	claims := users.CreateJWT(loggedInUser, server.Config.GetTokenExpirationDuration())

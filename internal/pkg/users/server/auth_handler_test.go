@@ -1,17 +1,18 @@
 package server
 
 import (
+	"encoding/json"
 	"github.com/emicklei/go-restful"
 	_ "github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	"github.com/klaital/volunteer-savvy-backend/internal/pkg/config"
 	"github.com/klaital/volunteer-savvy-backend/internal/pkg/testhelpers"
+	"github.com/klaital/volunteer-savvy-backend/internal/pkg/users"
 	_ "github.com/lib/pq"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/suite"
 	"net/http"
 	"net/http/httptest"
-	"path/filepath"
 	"testing"
 )
 
@@ -78,14 +79,14 @@ func (suite *AuthServerTestSuite) BeforeTest(suiteName, testName string) {
 	}
 
 	// Run some handcrafted SQL to inject common test data from the top-level testdata directory
-	dir, err := filepath.Abs(filepath.Join("..", "testdata"))
+	err := testhelpers.InitializeDatabase(suite.Config.GetDbConn(),
+		"file://../../../../db/migrations/",
+		"../testdata/")
 	if err != nil {
-		suite.T().Fatalf("Failed to generate fixture dir path: %v\n", err)
+		suite.T().Fatalf("Error initializing the db %v", err)
+		return
 	}
-	err = testhelpers.ResetFixtures(suite.Config.GetDbConn(), dir)
-	if err != nil {
-		suite.T().Fatalf("Failed to load fixtures: %v\n", err)
-	}
+
 }
 
 func (suite *AuthServerTestSuite) TestAuthServer_GrantTokenHandler() {
@@ -132,5 +133,17 @@ func (suite *AuthServerTestSuite) TestAuthServer_GrantTokenHandler() {
 	req.SetBasicAuth("kit@example.org", "password")
 	suite.Container.Dispatch(resp, req)
 	suite.Assert().Equal(http.StatusOK, resp.Code, "GrantTokenHandler returned wrong status code")
+
+	// Check that kit has roles claimed
+	var respData AccessTokenResponse
+	err = json.Unmarshal(resp.Body.Bytes(), &respData)
+	suite.Assert().Nilf(err, "Expected no err from unmarshaling token response. Instead got %+v", err)
+	suite.Assert().Equal(1, len(respData.Permissions), "Expected 1 org permissions in the auth response")
+	suite.Assert().Equal(1, len(respData.Permissions[1]), "expected 1 role on org 1")
+
+	// Decode the JWT itself and validate
+	suite.T().Log(respData.AccessToken)
+	claims := users.DecodeJWT(respData.AccessToken, suite.Config.GetPublicKey())
+	suite.Assert().NotNil(claims, "Expected valid claims")
 	// TODO: extract the JWT and use it to make a follow-on request
 }

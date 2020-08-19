@@ -84,7 +84,7 @@ func (server *UserServer) ListUsersHandler(request *restful.Request, response *r
 	logger := log.WithFields(log.Fields{
 		"operation": "ListUsersHandler",
 	})
-
+	
 	// Fetch users for organizations where the logged-in user is an Admin
 
 	// Extract the list of Org IDs to enumerate
@@ -101,6 +101,7 @@ func (server *UserServer) ListUsersHandler(request *restful.Request, response *r
 		return
 	}
 
+	logger.WithField("Users", userSet).Debug("Fetched users")
 	err = response.WriteEntity(ListUsersResponse{Users: userSet})
 	if err != nil {
 		logger.WithError(err).Error("Failed to serialize users")

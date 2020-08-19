@@ -134,6 +134,13 @@ func (cfg *ServiceConfig) GetDbConn() *sqlx.DB {
 	return cfg.databaseConnection
 }
 
+func (cfg *ServiceConfig) GetPublicKey() *rsa.PublicKey {
+	if cfg.jwtPublicKey == nil {
+		cfg.GetJWTKeys()
+	}
+	return cfg.jwtPublicKey
+}
+
 func (cfg *ServiceConfig) GetJWTKeys() (*rsa.PrivateKey, *rsa.PublicKey) {
 	if cfg.jwtPublicKey == nil {
 		// Try to base64 decode it once, since that's how we have to handle it for local run and testing
