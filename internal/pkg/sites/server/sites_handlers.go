@@ -4,30 +4,30 @@ import (
 	"database/sql"
 	"errors"
 	"github.com/emicklei/go-restful"
-	"github.com/klaital/volunteer-savvy-backend/internal/pkg/auth"
 	"github.com/klaital/volunteer-savvy-backend/internal/pkg/config"
 	"github.com/klaital/volunteer-savvy-backend/internal/pkg/filters"
 	"github.com/klaital/volunteer-savvy-backend/internal/pkg/sites"
+	"github.com/klaital/volunteer-savvy-backend/internal/pkg/users"
 	"github.com/klaital/volunteer-savvy-backend/internal/pkg/version"
 	"net/http"
 )
 
 type SitesServer struct {
 	ApiVersion string
-	Config *config.ServiceConfig
+	Config     *config.ServiceConfig
 }
 
 func New(cfg *config.ServiceConfig) *SitesServer {
 	return &SitesServer{
 		ApiVersion: version.Version,
-		Config: cfg,
+		Config:     cfg,
 	}
 }
 
 func (server *SitesServer) GetSitesAPI() *restful.WebService {
 	service := new(restful.WebService)
 	service.Path(server.Config.BasePath + "/sites").ApiVersion(server.ApiVersion)
-
+	authConfig := users.AuthConfig{PublicKey: server.Config.GetPublicKey()}
 	//
 	// Sites APIs
 	//
@@ -41,7 +41,7 @@ func (server *SitesServer) GetSitesAPI() *restful.WebService {
 			Returns(http.StatusOK, "Fetched all sites", ListSitesResponse{}))
 	service.Route(
 		service.POST("/sites/").
-			Filter(auth.ValidJwtFilter).
+			Filter(authConfig.ValidJwtFilter).
 			//Filter(filters.RateLimitingFilter).
 			// TODO: how do I write a filter that can inspect the Site object for the Organization ID, then validate that that user has permissions on that org+site?
 			//Filter(filters.RequireAdminPermission).
@@ -55,7 +55,7 @@ func (server *SitesServer) GetSitesAPI() *restful.WebService {
 			Returns(http.StatusForbidden, "Logged-in user is not authorized to create sites", nil))
 	service.Route(
 		service.GET("/sites/{siteSlug}").
-			Filter(auth.ValidJwtFilter).
+			Filter(authConfig.ValidJwtFilter).
 			//Filter(filters.RateLimitingFilter).
 			To(server.DescribeSiteHandler).
 			Doc("Fetch all sites").
@@ -64,7 +64,7 @@ func (server *SitesServer) GetSitesAPI() *restful.WebService {
 			Returns(http.StatusOK, "Fetched site data", sites.Site{}))
 	service.Route(
 		service.PUT("/sites/{siteSlug}").
-			Filter(auth.ValidJwtFilter).
+			Filter(authConfig.ValidJwtFilter).
 			//Filter(filters.RateLimitingFilter).
 			//Filter(filters.RequireSiteUpdatePermission).
 			To(server.UpdateSiteHandler).
@@ -78,7 +78,7 @@ func (server *SitesServer) GetSitesAPI() *restful.WebService {
 			Returns(http.StatusForbidden, "Logged-in user is not authorized to update this site", nil))
 	service.Route(
 		service.DELETE("/sites/{siteSlug}").
-			Filter(auth.ValidJwtFilter).
+			Filter(authConfig.ValidJwtFilter).
 			//Filter(filters.RateLimitingFilter).
 			//Filter(filters.RequireAdminPermission).
 			To(server.DeleteSiteHandler).
@@ -142,6 +142,7 @@ func (server *SitesServer) GetSitesAPI() *restful.WebService {
 type ListSitesResponse struct {
 	Sites []sites.Site `json:"sites"`
 }
+
 func (server *SitesServer) ListSitesHandler(request *restful.Request, response *restful.Response) {
 	ctx := filters.GetRequestContext(request)
 	logger := filters.GetContextLogger(ctx)

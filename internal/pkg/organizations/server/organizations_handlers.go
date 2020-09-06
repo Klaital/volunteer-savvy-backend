@@ -4,10 +4,10 @@ import (
 	"database/sql"
 	"errors"
 	"github.com/emicklei/go-restful"
-	"github.com/klaital/volunteer-savvy-backend/internal/pkg/auth"
 	"github.com/klaital/volunteer-savvy-backend/internal/pkg/config"
 	"github.com/klaital/volunteer-savvy-backend/internal/pkg/filters"
 	"github.com/klaital/volunteer-savvy-backend/internal/pkg/organizations"
+	"github.com/klaital/volunteer-savvy-backend/internal/pkg/users"
 	"github.com/klaital/volunteer-savvy-backend/internal/pkg/version"
 	"github.com/sirupsen/logrus"
 	"net/http"
@@ -16,24 +16,24 @@ import (
 
 type OrganizationsServer struct {
 	ApiVersion string
-	Config *config.ServiceConfig
+	Config     *config.ServiceConfig
 }
 
 func New(cfg *config.ServiceConfig) *OrganizationsServer {
 	return &OrganizationsServer{
 		ApiVersion: version.Version,
-		Config: cfg,
+		Config:     cfg,
 	}
 }
 
 //
 // Call this in the server setup function
 //
-func (server *OrganizationsServer) GetOrganizationsAPI() *restful.WebService{
+func (server *OrganizationsServer) GetOrganizationsAPI() *restful.WebService {
 
 	service := new(restful.WebService)
 	service.Path(server.Config.BasePath + "/organizations").ApiVersion(server.ApiVersion).Doc("Volunteer-Savvy Backend")
-
+	authConfig := users.AuthConfig{PublicKey: server.Config.GetPublicKey()}
 	//
 	// Organizations APIs
 	//
@@ -48,7 +48,7 @@ func (server *OrganizationsServer) GetOrganizationsAPI() *restful.WebService{
 	// TODO: CreateOrganization needs a SuperAdmin permissions check filter
 	service.Route(
 		service.POST("/").
-			Filter(auth.ValidJwtFilter).
+			Filter(authConfig.ValidJwtFilter).
 			//Filter(filters.RateLimitingFilter).
 			//Filter(filters.RequireSuperAdminPermission).
 			To(server.CreateOrganizationHandler).
@@ -71,7 +71,7 @@ func (server *OrganizationsServer) GetOrganizationsAPI() *restful.WebService{
 	// TODO: UpdateOrganization needs a SuperAdmin permissions check filter
 	service.Route(
 		service.PUT("/{organizationID}").
-			Filter(auth.ValidJwtFilter).
+			Filter(authConfig.ValidJwtFilter).
 			//Filter(filters.RateLimitingFilter).
 			//Filter(filters.RequireSuperAdminPermission).
 			To(server.UpdateOrganizationHandler).
@@ -87,7 +87,7 @@ func (server *OrganizationsServer) GetOrganizationsAPI() *restful.WebService{
 	// TODO: DeleteOrganizations needs a SuperAdmin permissions check filter
 	service.Route(
 		service.DELETE("/{organizationID}").
-			Filter(auth.ValidJwtFilter).
+			Filter(authConfig.ValidJwtFilter).
 			//Filter(filters.RateLimitingFilter).
 			//Filter(filters.RequireSuperAdminPermission).
 			To(server.DeleteOrganizationHandler).
@@ -98,9 +98,11 @@ func (server *OrganizationsServer) GetOrganizationsAPI() *restful.WebService{
 
 	return service
 }
+
 type ListOrganizationsResponse struct {
 	Organizations []organizations.Organization `json:"organizations"`
 }
+
 func (server *OrganizationsServer) ListOrganizationsHandler(request *restful.Request, response *restful.Response) {
 	// Set up the context for this request thread
 	ctx := filters.GetRequestContext(request)
@@ -135,7 +137,7 @@ func (server *OrganizationsServer) DescribeOrganizationHandler(request *restful.
 	// Set up the context for this request thread
 	ctx := filters.GetRequestContext(request)
 	logger := filters.GetContextLogger(ctx).WithFields(logrus.Fields{
-		"operation": "DescribeOrganizationsHandler",
+		"operation":            "DescribeOrganizationsHandler",
 		"OrganizationID.input": orgIDstr,
 	})
 
@@ -206,7 +208,6 @@ func (server *OrganizationsServer) CreateOrganizationHandler(request *restful.Re
 		return
 	}
 
-
 	// TODO: get logged-in user and add it to the context so that permissions and scope can be determined.
 
 	// Check whether the requested values form a valid Organization
@@ -237,12 +238,11 @@ func (server *OrganizationsServer) CreateOrganizationHandler(request *restful.Re
 	}
 }
 
-
 func (server *OrganizationsServer) UpdateOrganizationHandler(request *restful.Request, response *restful.Response) {
 	orgID := request.PathParameter("organizationID")
 	ctx := filters.GetRequestContext(request)
 	logger := filters.GetContextLogger(ctx).WithFields(logrus.Fields{
-		"operation": "UpdateOrganizationHandler",
+		"operation":            "UpdateOrganizationHandler",
 		"OrganizationID.input": orgID,
 	})
 
@@ -269,7 +269,6 @@ func (server *OrganizationsServer) UpdateOrganizationHandler(request *restful.Re
 		return
 	}
 
-
 	// TODO: get logged-in user and add it to the context so that permissions and scope can be determined.
 
 	// Publish the updates to the DB
@@ -288,11 +287,11 @@ func (server *OrganizationsServer) UpdateOrganizationHandler(request *restful.Re
 	}
 }
 
-func (server *OrganizationsServer)  DeleteOrganizationHandler(request *restful.Request, response *restful.Response) {
+func (server *OrganizationsServer) DeleteOrganizationHandler(request *restful.Request, response *restful.Response) {
 	orgIDstr := request.PathParameter("organizationID")
 	ctx := filters.GetRequestContext(request)
 	logger := filters.GetContextLogger(ctx).WithFields(logrus.Fields{
-		"operation": "DeleteOrganizationHandler",
+		"operation":            "DeleteOrganizationHandler",
 		"OrganizationID.input": orgIDstr,
 	})
 
