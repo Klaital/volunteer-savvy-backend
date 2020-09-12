@@ -87,10 +87,10 @@ func GetServiceConfig() (config *ServiceConfig, err error) {
 	// Configure the service logger's level
 	logLevel, err := logrus.ParseLevel(config.LogLevel)
 	if err != nil {
-		logger.SetLevel(logLevel)
-	} else {
 		logger.WithError(err).Errorf("Invalid log level '%s' specified. Defaulting to %s", config.LogLevel, logrus.DebugLevel)
 		logLevel = logrus.DebugLevel
+		logger.SetLevel(logLevel)
+	} else {
 		logger.SetLevel(logLevel)
 	}
 	// Configure the service logger's formatter

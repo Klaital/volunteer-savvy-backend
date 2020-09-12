@@ -1,18 +1,21 @@
 package users
 
 import (
+	"flag"
+	"fmt"
 	"github.com/jmoiron/sqlx"
 	"github.com/klaital/volunteer-savvy-backend/internal/pkg/config"
 	"github.com/klaital/volunteer-savvy-backend/internal/pkg/helpers"
 	"github.com/klaital/volunteer-savvy-backend/internal/pkg/testhelpers"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/suite"
+	"strings"
 	"testing"
 )
 
 type UsersTestSuite struct {
 	suite.Suite
-	Config *config.ServiceConfig
+	Config             *config.ServiceConfig
 	DatabaseConnection *sqlx.DB
 }
 
@@ -23,9 +26,9 @@ func TestUsersTestSuite(t *testing.T) {
 		DatabaseHost:        "localhost",
 		DatabaseDriver:      "postgres",
 		DatabaseUser:        "vstester",
-		DatabasePassword:    "rootpw",
-		DatabasePort:        5432,
-		DatabaseName:        "vstester",
+		DatabasePassword:    "vstester",
+		DatabasePort:        5556,
+		DatabaseName:        "vstest",
 		LogLevel:            "debug",
 		LogStyle:            "prettyjson",
 		Port:                8080,
@@ -45,12 +48,32 @@ func TestUsersTestSuite(t *testing.T) {
 	suite.Run(t, testSuite)
 }
 
+var (
+	migrationDir = flag.String("migrations", "", "directory with db migrations")
+	fixturesDir  = flag.String("fixtures", "", "directory with db fixtures")
+)
+
+func parseMigrationDir() string {
+	flag.Parse()
+	if migrationDir == nil || len(*migrationDir) == 0 {
+		return "db/migrations/"
+	}
+	return fmt.Sprintf("file://%s", strings.ReplaceAll(*migrationDir, "\\", "/"))
+}
+func parseFixturesDir() string {
+	flag.Parse()
+	if fixturesDir == nil || len(*fixturesDir) == 0 {
+		return "testdata"
+	}
+	return fmt.Sprintf("file://%s", strings.ReplaceAll(*fixturesDir, "\\", "/"))
+}
+
 // Perform global setup
 func (suite *UsersTestSuite) SetupAllSuite() {
 	suite.Assert().NotNil(suite.Config.GetDbConn(), "could not connect")
 	err := testhelpers.InitializeDatabase(suite.Config.GetDbConn(),
-		"file://../../../db/migrations/",
-		"testdata/")
+		parseMigrationDir(),
+		parseFixturesDir())
 	if err != nil {
 		suite.T().Fatalf("Error initializing the db %v", err)
 		return
@@ -63,9 +86,10 @@ func (suite *UsersTestSuite) BeforeTest(suiteName, testName string) {
 	if suite.DatabaseConnection == nil {
 		suite.SetupAllSuite()
 	}
-	helpers.CleanupTestDb(suite.DatabaseConnection)
-	helpers.LoadFixtures(suite.DatabaseConnection)
+	suite.Assert().Nil(helpers.CleanupTestDb(suite.DatabaseConnection), "Expected no error cleaning up test DB")
+	suite.Assert().Nil(helpers.LoadFixtures(suite.DatabaseConnection, parseFixturesDir()), "Expected no errors loading fixtures")
 }
-func (suite *UsersTestSuite) AfterTest(suiteName, testName string) {
-	helpers.CleanupTestDb(suite.DatabaseConnection)
-}
+
+//func (suite *UsersTestSuite) AfterTest(suiteName, testName string) {
+//	suite.Assert().Nil(helpers.CleanupTestDb(suite.DatabaseConnection), "Expected no error cleaning up test DB")
+//}

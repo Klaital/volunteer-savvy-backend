@@ -16,5 +16,22 @@ func (suite *UsersTestSuite) TestListUsersInSameOrgs() {
 
 	userSet, err := ListUsersInSameOrgs(context.Background(), &claims, suite.DatabaseConnection)
 	suite.Assert().Nilf(err, "Expected no error from ListUsersInSameOrgs. Got %+v", err)
-	suite.Assert().Equalf(4, len(userSet), "Expected %d userSet, got %d: %+v", 2, len(userSet), userSet)
+	suite.Assert().Equalf(3, len(userSet), "Expected %d userSet, got %d: %+v", 3, len(userSet), userSet)
+	expectedUsers := map[string]bool{
+		"kit":   true,
+		"user2": true,
+		"user3": true,
+		"user4": false,
+	}
+	for userGuid, expectedInList := range expectedUsers {
+		suite.Assert().Equalf(expectedInList, userInSet(userGuid, userSet), "UserSet incorrect. Expected user in list? %t, got %t", expectedInList, userInSet(userGuid, userSet))
+	}
+}
+func userInSet(guid string, set []User) bool {
+	for _, u := range set {
+		if u.Guid == guid {
+			return true
+		}
+	}
+	return false
 }

@@ -24,6 +24,7 @@ func LoadFixtures(db *sqlx.DB, fixturesDirectory string) error {
 		if strings.HasSuffix(f.Name(), ".sql") {
 			sqlBytes, err := ioutil.ReadFile(filepath.Join(fixturesDirectory, f.Name()))
 			if err != nil {
+
 				return err
 			}
 			sqlStmt := db.Rebind(string(sqlBytes))

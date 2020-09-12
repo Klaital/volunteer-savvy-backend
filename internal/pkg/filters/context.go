@@ -59,14 +59,13 @@ func GetContextLogger(ctx context.Context) *log.Entry {
 		}
 	}
 
-
 	baseLogger := log.New()
 
 	// Configure the logger from env vars
 	logLevelStr := os.Getenv("LOG_LEVEL")
 	logLevel, err := log.ParseLevel(logLevelStr)
 	if err != nil {
-		baseLogger.WithError(err).WithField("envLevel", logLevelStr).Error("Failed to parse log level")
+		//baseLogger.WithError(err).WithField("envLevel", logLevelStr).Warn("Failed to parse log level")
 		logLevel = log.DebugLevel
 	}
 	baseLogger.SetLevel(logLevel)
@@ -79,7 +78,7 @@ func GetContextLogger(ctx context.Context) *log.Entry {
 		baseLogger.SetFormatter(&log.JSONFormatter{})
 	case "prettyjson":
 		baseLogger.SetFormatter(&log.JSONFormatter{
-			PrettyPrint:      true,
+			PrettyPrint: true,
 		})
 	default:
 		baseLogger.SetFormatter(&log.TextFormatter{})

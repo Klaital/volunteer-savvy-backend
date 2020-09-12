@@ -10,12 +10,18 @@ import (
 	"github.com/sirupsen/logrus"
 	"io/ioutil"
 	"path/filepath"
+	"strings"
 )
 
 func CleanupTestDb(db *sqlx.DB) error {
 	// Delete all existing data
 	tables := []string{
 		"organizations",
+		"users",
+		"roles",
+		"sites",
+		"site_coordinators",
+		"daily_schedules",
 	}
 	//sqlStmt := db.Rebind("DROP TABLE ?")
 	for _, tableName := range tables {
@@ -28,15 +34,23 @@ func CleanupTestDb(db *sqlx.DB) error {
 	return nil
 }
 
-func LoadFixtures(db *sqlx.DB) error {
+func LoadFixtures(db *sqlx.DB, fixturePath string) error {
+	if len(fixturePath) == 0 {
+		logrus.Debug("Using default fixture path")
+		fixturePath = "testdata"
+	}
 	// Search for any .sql files in the testdata directory, and run them
-	files, err := ioutil.ReadDir("testdata")
+	files, err := ioutil.ReadDir(fixturePath)
 	if err != nil {
 		logrus.WithError(err).Fatal("failed to load fixture data")
 		return err
 	}
 
 	for _, f := range files {
+		if !strings.Contains(f.Name(), ".sql") {
+			continue
+		}
+		logrus.WithField("fixture", f.Name()).Debug("Loading fixture file")
 		sqlBytes, err := ioutil.ReadFile(filepath.Join("testdata", f.Name()))
 		if err != nil {
 			logrus.WithError(err).Fatal("Failed to read fixture file")

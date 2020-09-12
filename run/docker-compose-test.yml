@@ -1,0 +1,46 @@
+version: '3'
+services:
+  mango-profile:
+    image: klaital/volunteer-savvy-backend:latest
+    ports:
+      - "8081:8080"
+    command: ./volunteer-savvy-backend
+    env_file:
+      - .env
+      - postgres.env
+    environment:
+      - REALM_NAME=test
+      - SERVICE_IP=
+      - SERVICE_PORT=8080
+      - SERVICE_NAME=mango-profile
+      - LOG_LEVEL=debug
+      - LOG_STYLE=prettyjson
+      - OAUTH_URL=https://test.ops.rocketarena.com
+      - CMS_CDN_ROOT=https://cms.ops.rocketarena.com
+      - SWAGGER_FILE_PATH=/swagger-ui
+      - SWAGGER_API_PATH=/apidocs.json
+      - SWAGGER_PATH=/apidocs
+      - TOLLBOOTH_MAX_REQUESTS_PER_SECOND=5.0
+      - BASE_PATH=/profile
+      - HEALTH_PATH=/healthz
+      - INVENTORY_HOST=https://test.ops.rocketarena.com
+      - QUEST_HOST=https://test.ops.rocketarena.com
+      - INVENTORY_TIMEOUT=5000
+      - TELEMETRY_HOST=https://test.ops.rocketarena.com/telemetry
+      - TELEMETRY_PUBLISH_SECONDS=30
+      - METRIC_BUFFER_SIZE=0
+      - MATCH_QUEUE=https://sqs.us-west-2.amazonaws.com/054869303471/ccox-profile-match
+      - MATCH_QUEUE_BUFFER_SIZE=5
+      - MATCH_WORKER_COUNT=1
+      - AWS_REGION=us-east-1
+      - SERVICE_DEBUG=1
+      - EAC_QUIT_AUTOBAN_SECONDS=300
+      - EAC_QUIT_AUTOBAN_EXEMPT_PLAYLIST_IDS=0398e8b7-d26b-4355-a407-d5d5bf6c0acf,1f1538ca-99b4-4e93-86f0-e5456150c3eb
+  postgres-mango-profile:
+    image: timms/postgres-logging:10.3
+    ports:
+      - "5432:5432"
+    env_file: postgres.env
+    volumes:
+      - .:/docker-entrypoint-initdb.d
+    command: ["postgres", "-c", "log_statement=all"]

@@ -18,7 +18,6 @@ type User struct {
 	Roles map[uint64][]Role `json:"roles"` // the map key is the organization ID
 }
 
-
 // FindUser queries the database for the user and all other data needed to
 // display their profile.
 func FindUser(ctx context.Context, email string, db *sqlx.DB) (*User, error) {
@@ -112,7 +111,7 @@ func ListUsersInSameOrgs(ctx context.Context, jwtClaims *Claims, db *sqlx.DB) ([
 	}
 
 	sqlStmt, args, err := sqlx.In(`
-SELECT 
+SELECT DISTINCT
 	u.id, u.user_guid, u.email
 FROM users AS u JOIN roles AS r 
 	ON u.id = r.user_id
@@ -121,7 +120,7 @@ WHERE r.org_id IN (?)`, orgIdSet.GetItems())
 		logger.WithError(err).Error("Failed to compile IN query")
 		return []User{}, err
 	}
-
+	
 	// Load the users from the DB
 	var users []User
 	err = db.Select(&users, db.Rebind(sqlStmt), args...)
@@ -132,7 +131,7 @@ WHERE r.org_id IN (?)`, orgIdSet.GetItems())
 		}
 		logger.WithFields(log.Fields{
 			"sqlstmt": sqlStmt,
-			"orgIds": args,
+			"orgIds":  args,
 		}).WithError(err).Error("Failed to query users")
 		return []User{}, err
 	}
