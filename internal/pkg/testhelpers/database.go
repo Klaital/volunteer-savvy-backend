@@ -1,6 +1,7 @@
 package testhelpers
 
 import (
+	"fmt"
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
@@ -10,6 +11,29 @@ import (
 	"path/filepath"
 	"strings"
 )
+
+// CleanupTestDb truncates tables that are usually populated with fixtures.
+// The set of tables is hardcoded.
+func CleanupTestDb(db *sqlx.DB) error {
+	// Delete all existing data
+	tables := []string{
+		"organizations",
+		"users",
+		"roles",
+		"sites",
+		"site_coordinators",
+		"daily_schedules",
+	}
+	//sqlStmt := db.Rebind("DROP TABLE ?")
+	for _, tableName := range tables {
+		_, err := db.Exec(fmt.Sprintf("TRUNCATE TABLE %s CASCADE", tableName))
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
 
 // LoadFixtures scans the given directory for .sql files and runs all of them on the given DB handle.
 // They will run in filesystem order, not sorted.

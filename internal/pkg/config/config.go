@@ -25,6 +25,8 @@ type ServiceConfig struct {
 	DatabasePort       int64    `env:"DB_PORT"`
 	DatabaseName       string   `env:"DB_NAME"` // the actual database name to connect to
 	databaseConnection *sqlx.DB // to be set at runtime after main connects to the database
+	FixturesPath       string   `env:"FIXTURES_PATH" envDefault:"testdata"` // only used in test
+	MigrationsPath     string   `env:"MIGRATIONS_PATH" envDefault:"db/migrations"`
 
 	LogLevel string `env:"LOG_LEVEL" envDefault:"debug"`
 	LogStyle string `env:"LOG_STYLE" envDefault:"prettyjson"`

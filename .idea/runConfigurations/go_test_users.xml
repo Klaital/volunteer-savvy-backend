@@ -1,0 +1,41 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="go test users" type="GoTestRunConfiguration" factoryName="Go Test">
+    <module name="volunteer-savvy-backend" />
+    <working_directory value="$PROJECT_DIR$/internal/pkg/users" />
+    <go_parameters value="-i" />
+    <envs>
+      <env name="CGO_ENABLED" value="0" />
+      <env name="BASE_PATH" value="/vs" />
+      <env name="SERVICE_VERSION" value="0.0.0" />
+      <env name="DB_HOST" value="localhost" />
+      <env name="DB_DRIVER" value="postgres" />
+      <env name="PGPASSWORD" value="rootpw" />
+      <env name="DB_PORT" value="5432" />
+      <env name="DB_NAME" value="vs" />
+      <env name="LOG_LEVEL" value="debug" />
+      <env name="LOG_STYLE" value="prettyjson" />
+      <env name="PORT" value="8080" />
+      <env name="STATIC_CONTENT_PATH" value="/web" />
+      <env name="SWAGGER_FILE_PATH" value="/apidocs.json" />
+      <env name="SWAGGER_API_PATH" value="/apidocs/" />
+      <env name="MIGRATIONS_PATH" value="../../../db/migrations" />
+      <env name="FIXTURES_PATH" value="testdata" />
+    </envs>
+    <EXTENSION ID="net.ashald.envfile">
+      <option name="IS_ENABLED" value="false" />
+      <option name="IS_SUBST" value="false" />
+      <option name="IS_PATH_MACRO_SUPPORTED" value="false" />
+      <option name="IS_IGNORE_MISSING_FILES" value="false" />
+      <option name="IS_ENABLE_EXPERIMENTAL_INTEGRATIONS" value="false" />
+      <ENTRIES>
+        <ENTRY IS_ENABLED="true" PARSER="runconfig" />
+      </ENTRIES>
+    </EXTENSION>
+    <framework value="gotest" />
+    <kind value="PACKAGE" />
+    <package value="github.com/klaital/volunteer-savvy-backend/internal/pkg/users" />
+    <directory value="$PROJECT_DIR$/internal/pkg/users/" />
+    <filePath value="$PROJECT_DIR$" />
+    <method v="2" />
+  </configuration>
+</component>
