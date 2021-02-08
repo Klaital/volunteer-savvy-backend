@@ -1,0 +1,12 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="go build API server" type="GoApplicationRunConfiguration" factoryName="Go Application">
+    <module name="volunteer-savvy-backend" />
+    <working_directory value="$PROJECT_DIR$" />
+    <go_parameters value="-i" />
+    <kind value="DIRECTORY" />
+    <filePath value="$PROJECT_DIR$" />
+    <package value="github.com/klaital/volunteer-savvy-backend" />
+    <directory value="$PROJECT_DIR$/cmd/volunteer-savvy-backend" />
+    <method v="2" />
+  </configuration>
+</component>
