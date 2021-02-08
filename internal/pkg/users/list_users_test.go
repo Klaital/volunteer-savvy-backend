@@ -14,7 +14,7 @@ func (suite *UsersTestSuite) TestListUsersInSameOrgs() {
 		},
 	}
 
-	userSet, err := ListUsersInSameOrgs(context.Background(), &claims, suite.DatabaseConnection)
+	userSet, err := ListUsersInSameOrgs(context.Background(), &claims, suite.Config.GetDbConn())
 	suite.Assert().Nilf(err, "Expected no error from ListUsersInSameOrgs. Got %+v", err)
 	suite.Assert().Equalf(3, len(userSet), "Expected %d userSet, got %d: %+v", 3, len(userSet), userSet)
 	expectedUsers := map[string]bool{

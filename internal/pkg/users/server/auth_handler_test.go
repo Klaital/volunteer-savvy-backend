@@ -54,7 +54,12 @@ func TestAuthHandlerTestSuite(t *testing.T) {
 	server := New(&cfg)
 	testSuite.Container = restful.NewContainer()
 	testSuite.Container.Add(server.GetAuthAPI())
-	suite.Run(t, testSuite)
+
+	if testing.Short() {
+		t.Skip("Skipping Auth Handler tests in short mode")
+	} else {
+		suite.Run(t, testSuite)
+	}
 }
 
 func (suite *AuthServerTestSuite) SetupAllSuite() {

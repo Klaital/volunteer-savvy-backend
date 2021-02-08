@@ -55,15 +55,19 @@ func TestUserHandlerTestSuite(t *testing.T) {
 	server := New(&cfg)
 	testSuite.Container = restful.NewContainer()
 	testSuite.Container.Add(server.GetUsersAPI())
-	suite.Run(t, testSuite)
+	if testing.Short() {
+		t.Skip("Skipping User Handlers tests in short mode")
+	} else {
+		suite.Run(t, testSuite)
+	}
 }
 
 func (suite *UserServerTestSuite) SetupAllSuite() {
 	// TODO: launch the test database server with docker
 	suite.Assert().NotNil(suite.Config.GetDbConn(), "could not connect")
 	err := testhelpers.InitializeDatabase(suite.Config.GetDbConn(),
-		"file://../../../../db/migrations/",
-		"../testdata/")
+		suite.Config.MigrationsPath,
+		suite.Config.FixturesPath)
 	if err != nil {
 		suite.T().Fatalf("Error initializing the db %v", err)
 		return

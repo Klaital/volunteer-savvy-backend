@@ -6,8 +6,8 @@ import (
 )
 
 type Client struct {
-	Host string
-	OauthHost string
+	Host         string
+	OauthHost    string
 	GetTokenPath string
 
 	// Authentication
@@ -19,14 +19,14 @@ type Client struct {
 
 	// Runtime caching
 	httpClient *http.Client
-	jwt string
+	jwt        string
 }
 
 func New() *Client {
 	return &Client{
 		Host:         "",
-		Username: "",
-		Password: "",
+		Username:     "",
+		Password:     "",
 		OauthHost:    "",
 		GetTokenPath: "",
 		LogContext:   nil,
@@ -35,14 +35,14 @@ func New() *Client {
 	}
 }
 
-func (c *Client) getJwt() string {
-	if len(c.jwt) > 0 {
-		return c.jwt
-	}
-	if len(c.Username) == 0 || len(c.Password) == 0{
-		return ""
-	}
-
-	resp, err := c.GetNewJwt()
-
-}
+//func (c *Client) getJwt() string {
+//	if len(c.jwt) > 0 {
+//		return c.jwt
+//	}
+//	if len(c.Username) == 0 || len(c.Password) == 0{
+//		return ""
+//	}
+//
+//	resp, err := c.GetNewJwt()
+//
+//}

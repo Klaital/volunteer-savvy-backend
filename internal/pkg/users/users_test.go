@@ -1,7 +1,6 @@
 package users
 
 import (
-	"flag"
 	"github.com/jmoiron/sqlx"
 	"github.com/klaital/volunteer-savvy-backend/internal/pkg/config"
 	"github.com/klaital/volunteer-savvy-backend/internal/pkg/testhelpers"
@@ -13,7 +12,7 @@ import (
 type UsersTestSuite struct {
 	suite.Suite
 	Config             *config.ServiceConfig
-	DatabaseConnection *sqlx.DB
+	databaseConnection *sqlx.DB
 }
 
 func TestUsersTestSuite(t *testing.T) {
@@ -44,13 +43,12 @@ func TestUsersTestSuite(t *testing.T) {
 	}
 	testSuite := new(UsersTestSuite)
 	testSuite.Config = &cfg
-	suite.Run(t, testSuite)
+	if testing.Short() {
+		t.Skip("Skipping OrganizationsTestSuite in short mode")
+	} else {
+		suite.Run(t, testSuite)
+	}
 }
-
-var (
-	migrationDir = flag.String("migrations", "", "directory with db migrations")
-	fixturesDir  = flag.String("fixtures", "", "directory with db fixtures")
-)
 
 // Perform global setup
 func (suite *UsersTestSuite) SetupAllSuite() {
@@ -62,16 +60,16 @@ func (suite *UsersTestSuite) SetupAllSuite() {
 		suite.T().Fatalf("Error initializing the db %v", err)
 		return
 	}
-	suite.DatabaseConnection = suite.Config.GetDbConn()
+	suite.databaseConnection = suite.Config.GetDbConn()
 }
 
 // Perform initialization required by each test function
 func (suite *UsersTestSuite) BeforeTest(suiteName, testName string) {
-	if suite.DatabaseConnection == nil {
+	if suite.databaseConnection == nil {
 		suite.SetupAllSuite()
 	}
-	suite.Assert().Nil(testhelpers.CleanupTestDb(suite.DatabaseConnection), "Expected no error cleaning up test DB")
-	suite.Assert().Nil(testhelpers.LoadFixtures(suite.DatabaseConnection, suite.Config.FixturesPath), "Expected no errors loading fixtures")
+	suite.Assert().Nil(testhelpers.CleanupTestDb(suite.Config.GetDbConn()), "Expected no error cleaning up test DB")
+	suite.Assert().Nil(testhelpers.LoadFixtures(suite.Config.GetDbConn(), suite.Config.FixturesPath), "Expected no errors loading fixtures")
 }
 
 //func (suite *UsersTestSuite) AfterTest(suiteName, testName string) {
