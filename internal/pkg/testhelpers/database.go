@@ -94,3 +94,15 @@ func InitializeDatabase(db *sqlx.DB, migrationsDir, fixturesDir string) error {
 	err = LoadFixtures(db, fixturesDir)
 	return err
 }
+
+// CountTable counts all rows in a table. Useful for testing whether a create or delete succeeded.
+func CountTable(tableName string, db *sqlx.DB) int {
+	sql := fmt.Sprintf("COUNT * FROM %s", tableName)
+	row := db.QueryRow(sql)
+	if row == nil {
+		return 0
+	}
+	var count int
+	row.Scan(&count)
+	return count
+}

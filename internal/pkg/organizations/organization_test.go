@@ -12,8 +12,8 @@ func (suite *OrganizationsTestSuite) TestNew() {
 func (suite *OrganizationsTestSuite) TestOrganization_Validate() {
 	o := New()
 
-	isValid, _ := o.Validate()
-	suite.Equal(false, isValid, "Expected New() to return a stub that does not pass validation")
+	validationErrs := o.Validate()
+	suite.Greater(0, len(validationErrs.Errors), "Expected New() to return a stub that does not pass validation")
 
 	// Try to make a valid organization
 	validOrg := &Organization{
@@ -27,9 +27,8 @@ func (suite *OrganizationsTestSuite) TestOrganization_Validate() {
 		Longitude:     0,
 	}
 
-	isValid, errs := validOrg.Validate()
-	suite.Equal(true, isValid, "Expected Org to pass validation")
-	suite.Equal(0, len(errs), "Expected no errors when validation passes")
+	validationErrs = validOrg.Validate()
+	suite.Equal(0, len(validationErrs.Errors), "Expected Org to pass validation")
 
 	// Set an invalid slug
 	o = &Organization{
@@ -43,6 +42,6 @@ func (suite *OrganizationsTestSuite) TestOrganization_Validate() {
 		Longitude:     0,
 	}
 
-	isValid, _ = o.Validate()
-	suite.Equal(false, isValid, fmt.Sprintf("Expected slug '%s' to be invalid, but successfully validated", o.Slug))
+	validationErrs = o.Validate()
+	suite.Greater(0, len(validationErrs.Errors), fmt.Sprintf("Expected slug '%s' to be invalid, but successfully validated", o.Slug))
 }

@@ -10,33 +10,34 @@ import (
 )
 
 type Organization struct {
-	Id uint64 `json:"id" db:"id"`
-	Name string `json:"name" db:"name"`
-	Slug string `json:"slug" db:"slug"`
+	Id       uint64 `json:"id" db:"id"`
+	Name     string `json:"name" db:"name"`
+	Slug     string `json:"slug" db:"slug"`
 	Authcode string `json:"authcode" db:"authcode"`
 
 	// Contact info
-	ContactUserId uint64 `json:"contact_user_id" db:"contact_user_id"`
-	ContactUser *users.User `json:"contact"`
+	ContactUserId uint64      `json:"contact_user_id" db:"contact_user_id"`
+	ContactUser   *users.User `json:"contact"`
 
 	// Geographical Center - used for map view defaults
-	Latitude float64 `json:"lat" db:"lat"`
+	Latitude  float64 `json:"lat" db:"lat"`
 	Longitude float64 `json:"lon" db:"lon"`
 }
 
 type OrganizationDbRow struct {
-	Id uint64 `json:"id" db:"id"`
-	Name string `json:"name" db:"name"`
-	Slug string `json:"slug" db:"slug"`
+	Id       uint64 `json:"id" db:"id"`
+	Name     string `json:"name" db:"name"`
+	Slug     string `json:"slug" db:"slug"`
 	Authcode string `json:"authcode" db:"authcode"`
 
 	// Contact info
 	ContactUserId sql.NullInt64 `json:"contact_user_id" db:"contact_user_id"`
 
 	// Geographical Center - used for map view defaults
-	Latitude float64 `json:"lat" db:"lat"`
+	Latitude  float64 `json:"lat" db:"lat"`
 	Longitude float64 `json:"lon" db:"lon"`
 }
+
 func (row OrganizationDbRow) CopyToOrganization() *Organization {
 	o := Organization{
 		Id:            row.Id,
