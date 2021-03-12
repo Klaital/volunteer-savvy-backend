@@ -1,4 +1,4 @@
-package users
+package integrationtest
 
 import (
 	"github.com/klaital/volunteer-savvy-backend/internal/pkg/testhelpers"
@@ -6,18 +6,20 @@ import (
 	"testing"
 )
 
-type UsersTestSuite struct {
+type IntegrationTestSuite struct {
 	testhelpers.DatabaseTestingSuite
 }
 
-func TestUsersTestSuite(t *testing.T) {
+func TestIntegrationTestSuite(t *testing.T) {
+
+	testSuite := new(IntegrationTestSuite)
 	cfg := testhelpers.GetStandardConfig()
-	cfg.FixturesPath = "./testdata/"
+	cfg.FixturesPath = "../../../testdata/"
 	cfg.MigrationsPath = "file://../../../db/migrations/"
-	testSuite := new(UsersTestSuite)
 	testSuite.Config = &cfg
+
 	if testing.Short() {
-		t.Skip("Skipping UsersTestSuite in short mode")
+		t.Skip("Skipping Organizations integration tests in short mode")
 	} else {
 		suite.Run(t, testSuite)
 	}

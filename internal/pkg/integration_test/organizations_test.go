@@ -2,71 +2,13 @@ package integrationtest
 
 import (
 	"context"
-	"github.com/klaital/volunteer-savvy-backend/internal/pkg/config"
 	"github.com/klaital/volunteer-savvy-backend/internal/pkg/organizations"
 	"github.com/klaital/volunteer-savvy-backend/internal/pkg/testhelpers"
-	"github.com/stretchr/testify/suite"
 	"testing"
 )
 
-type OrganizationsTestSuite struct {
-	suite.Suite
-	Config          *config.ServiceConfig
-	suiteConfigured bool
-}
-
-func TestOrganizationsTestSuite(t *testing.T) {
-
-	testSuite := new(OrganizationsTestSuite)
-	testSuite.Config = getStaticConfig()
-
-	if testing.Short() {
-		t.Skip("Skipping Organizations integration tests in short mode")
-	} else {
-		suite.Run(t, testSuite)
-	}
-}
-
-// Perform global setup
-func (suite *OrganizationsTestSuite) SetupAllSuite() {
-	cfg, err := config.GetServiceConfig()
-	if err != nil {
-		suite.T().Fatalf("Failed to load environment: %v", err)
-		return
-	}
-	if cfg == nil {
-		suite.T().Fatalf("Failed to read config")
-		return
-	}
-	err = testhelpers.InitializeDatabase(suite.Config.GetDbConn(), suite.Config.MigrationsPath, suite.Config.FixturesPath)
-	if err != nil {
-		suite.T().Fatalf("Failed to init test db: %v", err)
-		return
-	}
-}
-
-// Perform initialization required by each test function
-func (suite *OrganizationsTestSuite) BeforeTest(suiteName, testName string) {
-	if !suite.suiteConfigured {
-		suite.SetupAllSuite()
-		suite.suiteConfigured = true
-	}
-	err := testhelpers.CleanupTestDb(suite.Config.GetDbConn())
-	if err != nil {
-		suite.T().Fatalf("Failed to cleanup test db: %v", err)
-	}
-	err = testhelpers.LoadFixtures(suite.Config.GetDbConn(), suite.Config.FixturesPath)
-	if err != nil {
-		suite.T().Fatalf("Failed to load fixtures: %v", err)
-	}
-}
-
-func (suite *OrganizationsTestSuite) AfterTest(suiteName, testName string) {
-	testhelpers.CleanupTestDb(suite.Config.GetDbConn())
-}
-
 // TestOrganization_Create tests whether Organizations can be inserted into the database.
-func (suite *OrganizationsTestSuite) TestOrganization_Create() {
+func (suite *IntegrationTestSuite) TestOrganization_Create() {
 	if testing.Short() {
 		suite.T().Skip("Skipping DB tests in short mode")
 		return
@@ -100,7 +42,7 @@ func (suite *OrganizationsTestSuite) TestOrganization_Create() {
 }
 
 // TestOrganization_Find tests whether Organizations can be selected from the DB.
-func (suite *OrganizationsTestSuite) TestOrganization_FindSlug() {
+func (suite *IntegrationTestSuite) TestOrganization_FindSlug() {
 	if testing.Short() {
 		suite.T().Skip("Skipping DB tests in short mode")
 		return

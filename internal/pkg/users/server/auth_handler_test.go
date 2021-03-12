@@ -5,21 +5,17 @@ import (
 	"github.com/emicklei/go-restful"
 	_ "github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
-	"github.com/klaital/volunteer-savvy-backend/internal/pkg/config"
 	"github.com/klaital/volunteer-savvy-backend/internal/pkg/testhelpers"
 	"github.com/klaital/volunteer-savvy-backend/internal/pkg/users"
 	_ "github.com/lib/pq"
-	"github.com/stretchr/testify/suite"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 )
 
 type AuthServerTestSuite struct {
-	suite.Suite
-	Config          *config.ServiceConfig
-	Container       *restful.Container
-	suiteConfigured bool
+	testhelpers.DatabaseTestingSuite
+	Container *restful.Container
 }
 
 // TestAuthHandlerTestSuite is the "main" entry point for the suite.
@@ -35,39 +31,6 @@ func TestAuthHandlerTestSuite(t *testing.T) {
 
 	if testing.Short() {
 		t.Skip("Skipping Auth Handler tests in short mode")
-	}
-}
-
-func (suite *AuthServerTestSuite) SetupAllSuite() {
-	cfg, err := config.GetServiceConfig()
-	if err != nil {
-		suite.T().Fatalf("Failed to load environment: %v", err)
-		return
-	}
-	if cfg == nil {
-		suite.T().Fatalf("Failed to read config")
-		return
-	}
-	err = testhelpers.InitializeDatabase(suite.Config.GetDbConn(), suite.Config.MigrationsPath, suite.Config.FixturesPath)
-	if err != nil {
-		suite.T().Fatalf("Failed to init test db: %v", err)
-		return
-	}
-}
-
-// Perform initialization required by each test function
-func (suite *AuthServerTestSuite) BeforeTest(suiteName, testName string) {
-	if !suite.suiteConfigured {
-		suite.SetupAllSuite()
-		suite.suiteConfigured = true
-	}
-	err := testhelpers.CleanupTestDb(suite.Config.GetDbConn())
-	if err != nil {
-		suite.T().Fatalf("Failed to cleanup test db: %v", err)
-	}
-	err = testhelpers.LoadFixtures(suite.Config.GetDbConn(), suite.Config.FixturesPath)
-	if err != nil {
-		suite.T().Fatalf("Failed to load fixtures: %v", err)
 	}
 }
 

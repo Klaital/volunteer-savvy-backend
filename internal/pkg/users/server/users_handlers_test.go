@@ -17,10 +17,8 @@ import (
 )
 
 type UserServerTestSuite struct {
-	suite.Suite
-	Config          *config.ServiceConfig
-	Container       *restful.Container
-	suiteConfigured bool
+	testhelpers.DatabaseTestingSuite
+	Container *restful.Container
 }
 
 // TestUserHandlerTestSuite is the "main" entry point for the suite.
@@ -38,42 +36,6 @@ func TestUserHandlerTestSuite(t *testing.T) {
 	} else {
 		suite.Run(t, testSuite)
 	}
-}
-
-func (suite *UserServerTestSuite) SetupAllSuite() {
-	cfg, err := config.GetServiceConfig()
-	if err != nil {
-		suite.T().Fatalf("Failed to load environment: %v", err)
-		return
-	}
-	if cfg == nil {
-		suite.T().Fatalf("Failed to read config")
-		return
-	}
-	err = testhelpers.InitializeDatabase(suite.Config.GetDbConn(), suite.Config.MigrationsPath, suite.Config.FixturesPath)
-	if err != nil {
-		suite.T().Fatalf("Failed to init test db: %v", err)
-		return
-	}
-}
-
-// Perform initialization required by each test function
-func (suite *UserServerTestSuite) BeforeTest(suiteName, testName string) {
-	if !suite.suiteConfigured {
-		suite.SetupAllSuite()
-		suite.suiteConfigured = true
-	}
-	err := testhelpers.CleanupTestDb(suite.Config.GetDbConn())
-	if err != nil {
-		suite.T().Fatalf("Failed to cleanup test db: %v", err)
-	}
-	err = testhelpers.LoadFixtures(suite.Config.GetDbConn(), suite.Config.FixturesPath)
-	if err != nil {
-		suite.T().Fatalf("Failed to load fixtures: %v", err)
-	}
-}
-func (suite *UserServerTestSuite) AfterTest(suiteName, testName string) {
-	testhelpers.CleanupTestDb(suite.Config.GetDbConn())
 }
 
 func (suite *UserServerTestSuite) TestListUsersHandler() {
