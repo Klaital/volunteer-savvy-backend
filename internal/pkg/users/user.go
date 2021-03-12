@@ -109,6 +109,8 @@ func ListUsersInSameOrgs(ctx context.Context, jwtClaims *Claims, db *sqlx.DB) ([
 		logger.WithField("Claims", *jwtClaims).Debug("No claims to find users against")
 		return []User{}, nil
 	}
+	logger = logger.WithField("OrgIdSet", orgIdSet)
+	logger.Debug("Generated Org ID list for user")
 
 	sqlStmt, args, err := sqlx.In(`
 SELECT DISTINCT
@@ -120,7 +122,7 @@ WHERE r.org_id IN (?)`, orgIdSet.GetItems())
 		logger.WithError(err).Error("Failed to compile IN query")
 		return []User{}, err
 	}
-	
+
 	// Load the users from the DB
 	var users []User
 	err = db.Select(&users, db.Rebind(sqlStmt), args...)

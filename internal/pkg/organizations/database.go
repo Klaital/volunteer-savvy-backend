@@ -2,6 +2,7 @@ package organizations
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/jmoiron/sqlx"
 	"github.com/klaital/volunteer-savvy-backend/internal/pkg/filters"
@@ -34,6 +35,17 @@ func DescribeOrganization(ctx context.Context, db *sqlx.DB, organizationID int64
 	org := orgRow.CopyToOrganization()
 	return org, nil
 }
+func DescribeOrganizationBySlug(ctx context.Context, db *sqlx.DB, slug string) (*Organization, error) {
+	sqlStmt := db.Rebind(describeOrganizationBySlugSql)
+	var orgRow OrganizationDbRow
+	err := db.Get(&orgRow, sqlStmt, slug)
+	if err != nil {
+		return nil, err
+	}
+
+	org := orgRow.CopyToOrganization()
+	return org, nil
+}
 
 func (o *Organization) Create(ctx context.Context, db *sqlx.DB) error {
 	logger := filters.GetContextLogger(ctx).WithFields(logrus.Fields{
@@ -48,11 +60,21 @@ func (o *Organization) Create(ctx context.Context, db *sqlx.DB) error {
 	}
 
 	sqlStmt := db.Rebind(createOrganizationSql)
-	_, err := db.NamedExec(sqlStmt, o)
+	rows, err := db.NamedQueryContext(ctx, sqlStmt, o)
 	if err != nil {
 		logger.WithError(err).Error("Failed to insert organization")
 		return err
 	}
+	if rows == nil {
+		logger.Error("No rows returned from insert")
+		return errors.New("no rows returned from insert")
+	}
+	var newId int64
+	for rows.Next() {
+		rows.Scan(&newId)
+	}
+	o.Id = uint64(newId)
+
 	return nil
 }
 

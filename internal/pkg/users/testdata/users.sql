@@ -14,7 +14,7 @@ INSERT INTO organizations (id, name, slug, authcode) VALUES
 
 INSERT INTO roles (id, org_id, user_id, name) VALUES
     (1, 1, 1, 1) -- kit, testorg1, OrgAdmin
-    , (2, 1, 2, 1) -- kit, testorg2, OrgAdmin
+    , (2, 2, 1, 1) -- kit, testorg2, OrgAdmin
     , (3, 1, 2, 2) -- user2, testorg1, Volunteer
     , (4, 2, 3, 2) -- user3, testorg2, Volunteer
     , (5, 3, 4, 2) -- user4, testorg3, Volunteer

@@ -4,7 +4,8 @@ const createOrganizationSql = `
 INSERT INTO organizations 
 		(name, slug, authcode, contact_user_id, lat, lon) 
 	VALUES 
-		(:name, :slug, :authcode, :contact_user_id, :lat, :lon)`
+		(:name, :slug, :authcode, :contact_user_id, :lat, :lon)
+RETURNING id`
 const updateOrganizationSql = `
 UPDATE organizations 
 SET 
@@ -22,3 +23,4 @@ const deleteOrganizationNullFkeysSql = `
 `
 const listOrganizationsSql = `SELECT id, name, slug, authcode, contact_user_id, lat, lon FROM organizations`
 const describeOrganizationSql = `SELECT id, name, slug, authcode, contact_user_id, lat, lon FROM organizations WHERE id=?`
+const describeOrganizationBySlugSql = `SELECT id, name, slug, authcode, contact_user_id, lat, lon FROM organizations WHERE slug=?`

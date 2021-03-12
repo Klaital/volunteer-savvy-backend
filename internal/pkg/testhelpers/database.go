@@ -8,6 +8,7 @@ import (
 	"github.com/jmoiron/sqlx"
 	log "github.com/sirupsen/logrus"
 	"io/ioutil"
+	"os"
 	"path/filepath"
 	"strings"
 )
@@ -26,10 +27,12 @@ func CleanupTestDb(db *sqlx.DB) error {
 	}
 	//sqlStmt := db.Rebind("DROP TABLE ?")
 	for _, tableName := range tables {
-		_, err := db.Exec(fmt.Sprintf("TRUNCATE TABLE %s CASCADE", tableName))
-		if err != nil {
-			return err
-		}
+		// TODO: handle this error more gracefully to discern between "Table not found" and other DB connection issues.
+		//_, err := db.Exec(fmt.Sprintf("TRUNCATE TABLE %s CASCADE", tableName))
+		//if err != nil {
+		//	return err
+		//}
+		db.Exec(fmt.Sprintf("TRUNCATE TABLE %s CASCADE", tableName))
 	}
 
 	return nil
@@ -41,6 +44,8 @@ func LoadFixtures(db *sqlx.DB, fixturesDirectory string) error {
 	// Search for any .sql files in the given testdata directory and run them
 	files, err := ioutil.ReadDir(fixturesDirectory)
 	if err != nil {
+		wd, _ := os.Getwd()
+		log.WithField("cwd", wd).WithError(err).Error("Failed to open fixtures directory")
 		return err
 	}
 
@@ -77,7 +82,19 @@ func DropAllTables(db *sqlx.DB) error {
 // InitializeDatabase drops all tables in the provided database, then runs the migrations
 // found in the migrationsDir, then loads the fixtures found in fixturesDir.
 func InitializeDatabase(db *sqlx.DB, migrationsDir, fixturesDir string) error {
-	_ = DropAllTables(db)
+	dropDriver, err := postgres.WithInstance(db.DB, &postgres.Config{})
+	if err != nil {
+		log.WithError(err).Error("Failed to create driver for dropping tables")
+		return err
+	}
+	dropMigrator, err := migrate.NewWithDatabaseInstance(migrationsDir, "postgres", dropDriver)
+	if err != nil {
+		wd, _ := os.Getwd()
+		log.WithError(err).WithField("wd", wd).WithField("MigrationsDir", migrationsDir).Error("Failed to init drop migrator")
+		return err
+	}
+	dropMigrator.Drop()
+
 	driver, err := postgres.WithInstance(db.DB, &postgres.Config{})
 	if err != nil {
 		return err
@@ -85,19 +102,25 @@ func InitializeDatabase(db *sqlx.DB, migrationsDir, fixturesDir string) error {
 
 	m, err := migrate.NewWithDatabaseInstance(migrationsDir, "postgres", driver)
 	if err != nil {
+		wd, _ := os.Getwd()
+		log.WithError(err).WithField("wd", wd).WithField("MigrationsDir", migrationsDir).Error("Failed to init migrator")
 		return err
 	}
 	err = m.Up()
 	if err != nil && err != migrate.ErrNoChange {
+		log.WithError(err).Error("Failed to migrate schema")
 		return err
 	}
 	err = LoadFixtures(db, fixturesDir)
+	if err != nil {
+		log.WithError(err).Error("Failed to load fixtures")
+	}
 	return err
 }
 
 // CountTable counts all rows in a table. Useful for testing whether a create or delete succeeded.
 func CountTable(tableName string, db *sqlx.DB) int {
-	sql := fmt.Sprintf("COUNT * FROM %s", tableName)
+	sql := fmt.Sprintf("SELECT COUNT(*) FROM %s", tableName)
 	row := db.QueryRow(sql)
 	if row == nil {
 		return 0

@@ -1,14 +1,14 @@
 -- Organizations
 
 CREATE TABLE organizations (
-                               id SERIAL PRIMARY KEY,
-                               name VARCHAR(128) NOT NULL,
-                               slug VARCHAR(64) NOT NULL,
-                               authcode VARCHAR(64) UNIQUE NOT NULL,
+   id SERIAL PRIMARY KEY,
+   name VARCHAR(128) NOT NULL,
+   slug VARCHAR(64) NOT NULL,
+   authcode VARCHAR(64) UNIQUE NOT NULL,
 
-                               contact_user_id INTEGER, -- REFERENCES users(id),
-                               lat FLOAT,
-                               lon FLOAT
+   contact_user_id INTEGER, -- REFERENCES users(id),
+   lat FLOAT,
+   lon FLOAT
 );
 
 -- Sites
